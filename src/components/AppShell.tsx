@@ -67,7 +67,7 @@ export default function AppShell({ user, children }: Props) {
     <>
       <header className="app-header">
         <div className="app-logo">
-          NBA<span>PICK</span>
+          NBA<span>ONESHOT</span>
         </div>
         <div className="user-badge">
           <span>{user.name}</span>

@@ -143,6 +143,10 @@ export default function AdminPage() {
 
   // 채점 변경용
   const [regradeGameId, setRegradeGameId] = useState<number | null>(null);
+  // 채점완료 경기 접기/펼치기 (기본: 모두 접힘)
+  const [expandedGames, setExpandedGames] = useState<Set<number>>(new Set());
+  const toggleGameExpand = (id: number) =>
+    setExpandedGames((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   // 경기 목록 필터 - 월 선택 + 날짜 선택
   const currentYear = new Date().getFullYear();
@@ -281,6 +285,16 @@ export default function AdminPage() {
   };
 
   const endSeason = async (seasonId: number) => {
+    // 미정산(winner=null) 경기가 있으면 종료 불가
+    const { data: unsettled } = await supabase
+      .from("games")
+      .select("id")
+      .eq("season_id", seasonId)
+      .is("winner", null);
+    if (unsettled && unsettled.length > 0) {
+      showToast("❌ 채점 대기 경기가 " + unsettled.length + "개 있습니다. 모두 채점 후 종료하세요.");
+      return;
+    }
     if (!confirm("시즌을 종료하시겠습니까?")) return;
     const { error } = await supabase.from("seasons").update({ is_active: false }).eq("id", seasonId);
     if (!error) { showToast("시즌 종료 완료"); loadData(); }
@@ -464,51 +478,80 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <>
-                  {pagedGames.map((game) => (
-                    <div key={game.id} className="card">
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                          {format(new Date(game.start_time), "M/d HH:mm")} · {game.round}
-                        </span>
-                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          {game.winner && <span className="badge badge-correct">채점완료</span>}
-                          <button onClick={() => deleteGame(game.id)}
-                            style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 12, cursor: "pointer" }}>
-                            삭제
-                          </button>
-                        </div>
-                      </div>
-                      <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                        {getTeamKo(game.home_team)} ({getTeamAbbr(game.home_team)}) vs {getTeamKo(game.away_team)} ({getTeamAbbr(game.away_team)})
-                      </div>
-                      {game.winner && regradeGameId !== game.id && (
-                        <button
-                          style={{ width: "100%", padding: "6px", background: "var(--surface2)", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, cursor: "pointer" }}
-                          onClick={() => setRegradeGameId(game.id)}>
-                          ✏️ 채점 변경 (현재: {game.winner === "home" ? getTeamAbbr(game.home_team) : getTeamAbbr(game.away_team)} 승)
-                        </button>
-                      )}
-                      {regradeGameId === game.id && (
-                        <div>
-                          <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 8 }}>
-                            ⚠️ 기존 채점을 초기화하고 재채점합니다
+                  {pagedGames.map((game) => {
+                    const isExpanded = expandedGames.has(game.id);
+                    return (
+                      <div key={game.id} style={{
+                        border: "1px solid var(--border)",
+                        borderRadius: 12,
+                        marginBottom: 8,
+                        background: "var(--surface)",
+                        overflow: "hidden",
+                      }}>
+                        {/* 헤더 - 클릭으로 접기/펼치기 */}
+                        <div
+                          onClick={() => toggleGameExpand(game.id)}
+                          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", cursor: "pointer", userSelect: "none" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span style={{ fontWeight: 600, fontSize: 13 }}>
+                              {getTeamAbbr(game.home_team)} vs {getTeamAbbr(game.away_team)}
+                            </span>
+                            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                              {format(new Date(game.start_time), "M/d HH:mm")} · {game.round}
+                            </span>
                           </div>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button className="action-btn btn-approve" style={{ flex: 1 }}
-                              onClick={() => resetAndRegrade(game.id, "home")}>
-                              {getTeamAbbr(game.home_team)} 승으로 변경
-                            </button>
-                            <button className="action-btn" style={{ flex: 1, background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.2)" }}
-                              onClick={() => resetAndRegrade(game.id, "away")}>
-                              {getTeamAbbr(game.away_team)} 승으로 변경
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            {game.winner && (
+                              <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 600 }}>
+                                {game.winner === "home" ? getTeamAbbr(game.home_team) : getTeamAbbr(game.away_team)} 승
+                              </span>
+                            )}
+                            <span style={{ fontSize: 16, color: "var(--text-muted)", lineHeight: 1 }}>
+                              {isExpanded ? "−" : "+"}
+                            </span>
+                          </div>
+                        </div>
+                        {/* 펼쳐진 내용 */}
+                        {isExpanded && (
+                          <div style={{ padding: "0 14px 12px", borderTop: "1px solid var(--border)" }}>
+                            <div style={{ fontWeight: 600, margin: "10px 0 8px", fontSize: 13 }}>
+                              {getTeamKo(game.home_team)} ({getTeamAbbr(game.home_team)}) vs {getTeamKo(game.away_team)} ({getTeamAbbr(game.away_team)})
+                            </div>
+                            {game.winner && regradeGameId !== game.id && (
+                              <button
+                                style={{ width: "100%", padding: "6px", background: "var(--surface2)", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, cursor: "pointer", marginBottom: 8 }}
+                                onClick={() => setRegradeGameId(game.id)}>
+                                ✏️ 채점 변경 (현재: {game.winner === "home" ? getTeamAbbr(game.home_team) : getTeamAbbr(game.away_team)} 승)
+                              </button>
+                            )}
+                            {regradeGameId === game.id && (
+                              <div>
+                                <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 8 }}>
+                                  ⚠️ 기존 채점을 초기화하고 재채점합니다
+                                </div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button className="action-btn btn-approve" style={{ flex: 1 }}
+                                    onClick={() => resetAndRegrade(game.id, "home")}>
+                                    {getTeamAbbr(game.home_team)} 승으로 변경
+                                  </button>
+                                  <button className="action-btn" style={{ flex: 1, background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.2)" }}
+                                    onClick={() => resetAndRegrade(game.id, "away")}>
+                                    {getTeamAbbr(game.away_team)} 승으로 변경
+                                  </button>
+                                </div>
+                                <button style={{ width: "100%", marginTop: 6, padding: "4px", background: "transparent", color: "var(--text-muted)", border: "none", fontSize: 12, cursor: "pointer" }}
+                                  onClick={() => setRegradeGameId(null)}>취소</button>
+                              </div>
+                            )}
+                            <button onClick={() => deleteGame(game.id)}
+                              style={{ width: "100%", background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "5px 8px", fontSize: 12, cursor: "pointer", marginTop: 4 }}>
+                              🗑️ 삭제
                             </button>
                           </div>
-                          <button style={{ width: "100%", marginTop: 6, padding: "4px", background: "transparent", color: "var(--text-muted)", border: "none", fontSize: 12, cursor: "pointer" }}
-                            onClick={() => setRegradeGameId(null)}>취소</button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    );
+                  })}
 
                   {/* 페이지네이션 */}
                   {totalPages > 1 && (

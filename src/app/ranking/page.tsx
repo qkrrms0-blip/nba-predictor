@@ -169,7 +169,7 @@ export default function RankingPage() {
                   {entry.correct_votes}/{entry.total_votes} 적중 · 정확도 {entry.accuracy_pct}%
                 </div>
               </div>
-              <div className="rank-points">{entry.total_points}pt</div>
+              <div className="rank-points">{entry.total_points}</div>
             </div>
           );
         })
