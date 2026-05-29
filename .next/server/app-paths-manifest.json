@@ -1,0 +1,6 @@
+{
+  "/voting/page": "app/voting/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/history/page": "app/history/page.js",
+  "/ranking/page": "app/ranking/page.js"
+}
