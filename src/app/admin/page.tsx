@@ -292,7 +292,7 @@ export default function AdminPage() {
       .eq("season_id", seasonId)
       .is("winner", null);
     if (unsettled && unsettled.length > 0) {
-      showToast("❌ 채점 대기 경기가 " + unsettled.length + "개 있습니다. 모두 채점 후 종료하세요.");
+      showToast("❌ 미정산 경기가 " + unsettled.length + "개 있습니다. 정산 후 시즌종료 가능합니다");
       return;
     }
     if (!confirm("시즌을 종료하시겠습니까?")) return;
