@@ -60,7 +60,7 @@ export default function RankingPage() {
 
     // 유저별 집계
     const rankMap: Record<string, RankingEntry> = {};
-    allUsers.forEach((u: { id: string; name: string; email: string }) => {
+    allUsers.forEach((u: { id: string; name: string; email: string; bonus_points: number | null }) => {
       rankMap[u.id] = {
         id: u.id,
         name: u.name,
