@@ -17,6 +17,7 @@ export interface User {
   approved: boolean;
   role: "user" | "admin";
   created_at: string;
+  bonus_points?: number;
 }
 
 export interface Season {
@@ -60,6 +61,7 @@ export interface RankingEntry {
   correct_votes: number;
   total_points: number;
   accuracy_pct: number;
+  bonus_points?: number;
 }
 
 export interface VoteWithDetails extends Vote {
