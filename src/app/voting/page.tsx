@@ -52,7 +52,7 @@ export default function VotingPage() {
 
     const { data: allUsers } = await supabase
       .from("users")
-      .select("id, name, email")
+      .select("id, name, email, bonus_points")
       .eq("approved", true);
 
     const { data: votes } = await supabase
@@ -63,11 +63,11 @@ export default function VotingPage() {
     if (!allUsers) return;
 
     const rankMap: Record<string, RankingEntry> = {};
-    allUsers.forEach((u: { id: string; name: string; email: string }) => {
+    allUsers.forEach((u: { id: string; name: string; email: string; bonus_points: number | null }) => {
       rankMap[u.id] = {
         id: u.id, name: u.name, email: u.email,
         season_id: seasonData.id, season_name: "",
-        total_votes: 0, correct_votes: 0, total_points: 0, accuracy_pct: 0,
+        total_votes: 0, correct_votes: 0, total_points: u.bonus_points || 0, accuracy_pct: 0,
       };
     });
 
