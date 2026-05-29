@@ -43,7 +43,7 @@ export default function RankingPage() {
     // 승인된 모든 유저 가져오기
     const { data: allUsers } = await supabase
       .from("users")
-      .select("id, name, email")
+      .select("id, name, email, bonus_points")
       .eq("approved", true);
 
     // 해당 시즌 투표 집계
@@ -69,7 +69,7 @@ export default function RankingPage() {
         season_name: "",
         total_votes: 0,
         correct_votes: 0,
-        total_points: 0,
+        total_points: u.bonus_points || 0,
         accuracy_pct: 0,
       };
     });
