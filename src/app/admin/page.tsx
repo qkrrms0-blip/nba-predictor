@@ -564,7 +564,7 @@ export default function AdminPage() {
                 </>
               )}
             </>
-            </>)} {/* completedSectionOpen 닫기 */}
+            </>)}
           )}
 
           {/* ── 사용자 관리 ── */}
