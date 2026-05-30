@@ -143,9 +143,8 @@ export default function AdminPage() {
 
   // 채점 변경용
   const [regradeGameId, setRegradeGameId] = useState<number | null>(null);
-  // 채점완료 경기 섹션 접기/펼치기 (기본: 접힘)
+  // 채점 완료 경기 섹션 접기/펼치기 (기본: 접힘)
   const [completedSectionOpen, setCompletedSectionOpen] = useState(false);
-
 
   // 경기 목록 필터 - 월 선택 + 날짜 선택
   const currentYear = new Date().getFullYear();
@@ -420,19 +419,20 @@ export default function AdminPage() {
               {/* 채점 완료 경기 - 월/일 필터 */}
               <div
                 onClick={() => setCompletedSectionOpen((v) => !v)}
-                style={{ fontWeight: 700, fontSize: 14, marginBottom: completedSectionOpen ? 10 : 4, marginTop: 8,
+                style={{
+                  fontWeight: 700, fontSize: 14, marginTop: 8, marginBottom: 4,
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   cursor: "pointer", userSelect: "none",
                   padding: "10px 14px", borderRadius: 10,
                   border: "1px solid var(--border)", background: "var(--surface)",
                 }}>
                 <span>채점 완료 경기</span>
-                <span style={{ fontSize: 18, color: "var(--text-muted)", lineHeight: 1 }}>
+                <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
                   {completedSectionOpen ? "−" : "+"}
                 </span>
               </div>
 
-              {completedSectionOpen && (<>
+              {completedSectionOpen && <>
 
               {/* 월 선택 (원형 버튼) */}
               <div style={{ display: "flex", gap: 10, marginBottom: 12, justifyContent: "center" }}>
@@ -563,7 +563,9 @@ export default function AdminPage() {
                   </div>
                 </>
               )}
-            </>)}
+              </>}
+
+            </>
           )}
 
           {/* ── 사용자 관리 ── */}
