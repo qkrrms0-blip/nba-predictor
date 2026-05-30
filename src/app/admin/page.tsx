@@ -435,7 +435,7 @@ export default function AdminPage() {
               {completedSectionOpen && <>
 
               {/* 월 선택 (원형 버튼) */}
-              <div style={{ display: "flex", gap: 10, marginBottom: 12, justifyContent: "center" }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 12, marginTop: 12, justifyContent: "center" }}>
                 {PLAYOFF_MONTHS.map((m) => (
                   <button key={m.value}
                     onClick={() => { setFilterMonth(m.value); setFilterDay(null); setGamePage(1); }}
