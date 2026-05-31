@@ -294,7 +294,11 @@ export default function AdminPage() {
       });
       const json = await res.json();
       if (json.success) {
-        setEspnResult(`✅ ${json.total}경기 중 ${json.synced}경기 등록 완료`);
+        const parts = [];
+        if (json.inserted > 0) parts.push(`신규 ${json.inserted}경기`);
+        if (json.updated > 0) parts.push(`업데이트 ${json.updated}경기`);
+        const resultMsg = parts.length > 0 ? parts.join(" · ") : "변경 없음";
+        setEspnResult(`✅ ${resultMsg} (총 ${json.total}경기 확인)`);
         const today = format(new Date(), "yyyy-MM-dd");
         setEspnLastSync(today);
         const activeSeasonId = seasons.find((s) => s.is_active)?.id;
