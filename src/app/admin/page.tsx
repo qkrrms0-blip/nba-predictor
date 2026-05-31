@@ -393,7 +393,7 @@ export default function AdminPage() {
           {tab === "games" && (
             <>
               {/* ESPN 경기 가져오기 */}
-              <div className="card" style={{ marginBottom: 12 }}>
+              <div className="card" style={{ marginBottom: 12, overflow: "visible" }}>
                 <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
                   🏀 ESPN 경기 자동 등록
                 </div>
@@ -440,13 +440,13 @@ export default function AdminPage() {
                 {/* 날짜 범위 - 각각 전체 폭 (모바일 침범 방지) */}
                 <div className="form-group">
                   <label className="form-label">시작일</label>
-                  <input type="date" className="text-input" style={{ width: "100%", boxSizing: "border-box" }}
+                  <input type="date" className="text-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block" }}
                     value={espnStartDate}
                     onChange={(e) => setEspnStartDate(e.target.value)} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">종료일</label>
-                  <input type="date" className="text-input" style={{ width: "100%", boxSizing: "border-box" }}
+                  <input type="date" className="text-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block" }}
                     value={espnEndDate}
                     onChange={(e) => setEspnEndDate(e.target.value)} />
                 </div>
@@ -483,7 +483,7 @@ export default function AdminPage() {
               {/* 경기 추가 폼 - 접기/펼치기 */}
               <div style={{
                 border: "1px solid var(--border)", borderRadius: 10,
-                background: "var(--surface)", marginBottom: 12, overflow: "hidden",
+                background: "var(--surface)", marginBottom: 12,
               }}>
                 <div
                   onClick={() => setAddGameOpen((v) => !v)}
@@ -534,13 +534,13 @@ export default function AdminPage() {
                     {/* 시작시간 / 마감시간 - 각각 전체 폭 (날짜피커 침범 방지) */}
                     <div className="form-group">
                       <label className="form-label">경기 시작시간</label>
-                      <input type="datetime-local" className="text-input" style={{ width: "100%", boxSizing: "border-box" }}
+                      <input type="datetime-local" className="text-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block" }}
                         value={newGame.start_time}
                         onChange={(e) => setNewGame({ ...newGame, start_time: e.target.value })} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">투표 마감시간</label>
-                      <input type="datetime-local" className="text-input" style={{ width: "100%", boxSizing: "border-box" }}
+                      <input type="datetime-local" className="text-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block" }}
                         value={newGame.vote_deadline}
                         onChange={(e) => setNewGame({ ...newGame, vote_deadline: e.target.value })} />
                     </div>

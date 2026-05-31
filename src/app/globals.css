@@ -1,6 +1,10 @@
 /* src/app/globals.css */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap');
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 :root {
   --bg: #0a0a0f;
   --surface: #111118;
@@ -304,7 +308,7 @@ html, body {
 .date-tabs {
   display: flex;
   gap: 6px;
-  padding: 6px 0;
+  padding: 16px 0 8px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -351,8 +355,8 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px 14px;
-  margin-bottom: 4px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -402,6 +406,8 @@ html, body {
   cursor: pointer;
   outline: none;
   transition: border-color 0.2s;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .filter-select:focus { border-color: var(--accent); }
@@ -688,6 +694,7 @@ html, body {
 /* Input */
 .text-input {
   width: 100%;
+  box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -744,201 +751,4 @@ html, body {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-}
-
-/* ================================================
-   컴팩트 경기 카드 (투표 탭)
-   ================================================ */
-
-.game-card-compact {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  transition: border-color 0.2s;
-}
-.game-card-compact:hover { border-color: var(--border-bright); }
-
-.game-meta-compact {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  min-height: 20px;
-}
-
-.teams-compact {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.team-side {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.home-side {
-  justify-content: flex-end;
-  flex-direction: row-reverse;
-}
-
-.away-side {
-  justify-content: flex-start;
-}
-
-/* 로고 크기 강제 고정 */
-.team-logo-sm {
-  width: 32px;
-  height: 32px;
-  max-width: 32px;
-  max-height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
-}
-
-.vote-btn-inline {
-  padding: 5px 10px;
-  border-radius: 6px;
-  border: 1.5px solid var(--border-bright);
-  background: transparent;
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  flex-shrink: 1;
-  min-width: 0;
-}
-.vote-btn-inline:hover {
-  border-color: var(--accent);
-  background: var(--accent-glow);
-  color: var(--accent);
-}
-.vote-btn-inline.selected-home {
-  border-color: var(--accent2);
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--accent2);
-}
-.vote-btn-inline.selected-away {
-  border-color: var(--accent);
-  background: var(--accent-glow);
-  color: var(--accent);
-}
-
-.team-name-sm {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.vs-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  min-width: 36px;
-}
-.vs-center .vs-text {
-  font-family: var(--font-display);
-  font-size: 16px;
-  color: var(--text-muted);
-}
-.vs-center .score-display {
-  font-family: var(--font-display);
-  font-size: 18px;
-  color: var(--text);
-  letter-spacing: 1px;
-}
-
-.deadline-row {
-  font-size: 11px;
-  color: #ef4444;
-  margin-top: 5px;
-  text-align: center;
-}
-
-/* ================================================
-   원형 투표 버튼
-   ================================================ */
-
-.vote-circle-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid var(--border-bright);
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-family: var(--font-body);
-}
-.vote-circle-btn:hover {
-  border-color: var(--accent);
-  background: var(--accent-glow);
-  color: var(--accent);
-}
-.vote-circle-btn.selected-home {
-  border-color: var(--accent2);
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--accent2);
-}
-.vote-circle-btn.selected-away {
-  border-color: var(--accent);
-  background: var(--accent-glow);
-  color: var(--accent);
-}
-.vote-circle-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-/* VS 위아래 메타 블록 */
-.vs-meta-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  flex-shrink: 0;
-  min-width: 86px;
-}
-.vs-meta-round {
-  font-size: 10px;
-  color: var(--accent);
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
-.vs-meta-time {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.vs-meta-vs {
-  font-family: var(--font-display);
-  font-size: 20px;
-  color: var(--text-muted);
-  line-height: 1.1;
-}
-.vs-meta-deadline {
-  font-size: 10px;
-  color: #ef4444;
-  white-space: nowrap;
-}
-.vs-meta-closed {
-  font-size: 10px;
-  color: var(--text-muted);
 }
