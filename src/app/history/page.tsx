@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { Season } from "@/lib/types";
+import { getTeamLogoUrl } from "@/lib/nba-api";
 
 interface GameResult {
   id: number;
@@ -17,6 +18,8 @@ interface GameResult {
   correctVoters: { name: string; points: number }[];
   totalVotes: number;
   correctCount: number;
+  myVotedTeam?: "home" | "away" | null;
+  myIsCorrect?: boolean | null;
 }
 
 const PLAYOFF_MONTHS = [
@@ -36,10 +39,14 @@ export default function HistoryPage() {
   const [gameResults, setGameResults] = useState<GameResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedGame, setExpandedGame] = useState<number | null>(null);
+  const [userId, setUserId] = useState<string>("");
 
   // 시즌 목록 초기 로드
   useEffect(() => {
     const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setUserId(user.id);
+
       const { data: seasonData } = await supabase
         .from("seasons").select("*").order("id", { ascending: false });
       if (seasonData) {
@@ -62,6 +69,9 @@ export default function HistoryPage() {
     setFilterMonth(null);
     setFilterDay(null);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    const currentUserId = user?.id || userId;
+
     const { data: games } = await supabase
       .from("games").select("*")
       .eq("season_id", seasonId)
@@ -74,7 +84,7 @@ export default function HistoryPage() {
 
     const gameIds = games.map((g: any) => g.id);
     const { data: votes } = await supabase
-      .from("votes").select("game_id, is_correct, points, user_id")
+      .from("votes").select("game_id, is_correct, points, user_id, voted_team")
       .in("game_id", gameIds);
     const { data: allUsers } = await supabase.from("users").select("id, name");
 
@@ -86,7 +96,15 @@ export default function HistoryPage() {
       const correctVoters = gameVotes
         .filter((v: any) => v.is_correct === true)
         .map((v: any) => ({ name: userMap[v.user_id] || "알 수 없음", points: v.points || 0 }));
-      return { ...game, correctVoters, totalVotes: gameVotes.length, correctCount: correctVoters.length };
+      const myVote = gameVotes.find((v: any) => v.user_id === currentUserId);
+      return {
+        ...game,
+        correctVoters,
+        totalVotes: gameVotes.length,
+        correctCount: correctVoters.length,
+        myVotedTeam: myVote?.voted_team ?? null,
+        myIsCorrect: myVote?.is_correct ?? null,
+      };
     });
 
     setAllSeasonGames(results);
@@ -189,57 +207,106 @@ export default function HistoryPage() {
           <div className="empty-title">채점된 경기가 없습니다</div>
         </div>
       ) : (
-        gameResults.map((game) => (
-          <div key={game.id} className="card" style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                {format(new Date(game.start_time), "M/d HH:mm")} · {game.round}
-              </span>
-              <span className="badge badge-correct">채점완료</span>
-            </div>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
-              {game.home_team} vs {game.away_team}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>
-              승리: <strong style={{ color: "var(--text)" }}>
-                {game.winner === "home" ? game.home_team : game.away_team}
-              </strong>
-              {" · "}총 {game.totalVotes}표 중 {game.correctCount}명 적중
-            </div>
-            {game.correctCount === 0 ? (
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-                아무도 맞추지 못했습니다
+        gameResults.map((game) => {
+          const winnerTeam = game.winner === "home" ? game.home_team : game.away_team;
+          const winnerAbbr = winnerTeam.split(" ").slice(-1)[0];
+          const homeAbbr = game.home_team.split(" ").slice(-1)[0];
+          const awayAbbr = game.away_team.split(" ").slice(-1)[0];
+
+          // 테두리 색 결정
+          let borderColor = "var(--border)";
+          if (game.myIsCorrect === true) borderColor = "#3b82f6";
+          else if (game.myIsCorrect === false) borderColor = "#ef4444";
+
+          return (
+            <div key={game.id} style={{
+              background: "var(--surface)",
+              border: `1.5px solid ${borderColor}`,
+              borderRadius: "var(--radius)",
+              padding: "8px 12px",
+              marginBottom: 8,
+              transition: "border-color 0.2s",
+            }}>
+              {/* 상단: 라운드 + 날짜시간 + 완료뱃지 */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {game.round && (
+                    <span className="round-badge">{game.round}</span>
+                  )}
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                    {format(new Date(game.start_time), "M/d HH:mm")}
+                  </span>
+                </div>
+                <span className="badge badge-correct">완료</span>
               </div>
-            ) : (
-              <>
-                <button onClick={() => setExpandedGame(expandedGame === game.id ? null : game.id)}
-                  style={{
-                    width: "100%", textAlign: "left", background: "var(--surface2)",
-                    border: "1px solid var(--border)", borderRadius: 8,
-                    padding: "6px 10px", fontSize: 12, color: "var(--text-muted)", cursor: "pointer"
-                  }}>
-                  🎯 적중자 {game.correctCount}명 {expandedGame === game.id ? "▲" : "▼"}
-                </button>
-                {expandedGame === game.id && (
-                  <div style={{
-                    marginTop: 8,
-                    padding: "6px 10px",
-                    background: "rgba(34,197,94,0.08)",
-                    borderRadius: 6,
-                    fontSize: 13,
-                    lineHeight: 1.8,
-                  }}>
-                    {game.correctVoters.map((voter, i) => (
-                      <span key={i}>
-                        {voter.name}{i < game.correctVoters.length - 1 ? "\u00A0 " : ""}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        ))
+
+              {/* 중앙: 홈로고+약자  VS  원정로고+약자 + 승리팀 */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                {/* 홈팀 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <img
+                    src={getTeamLogoUrl(game.home_team)}
+                    alt={homeAbbr}
+                    style={{ width: 28, height: 28, objectFit: "contain" }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{homeAbbr}</span>
+                </div>
+
+                {/* VS + 승리팀 */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "var(--text-muted)" }}>VS</span>
+                  <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                    승리: <strong style={{ color: "var(--text)" }}>{winnerAbbr}</strong>
+                  </span>
+                </div>
+
+                {/* 원정팀 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexDirection: "row-reverse" }}>
+                  <img
+                    src={getTeamLogoUrl(game.away_team)}
+                    alt={awayAbbr}
+                    style={{ width: 28, height: 28, objectFit: "contain" }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{awayAbbr}</span>
+                </div>
+              </div>
+
+              {/* 적중자 */}
+              {game.correctCount === 0 ? (
+                <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic", marginTop: 6, textAlign: "center" }}>
+                  아무도 맞추지 못했습니다
+                </div>
+              ) : (
+                <div style={{ marginTop: 6 }}>
+                  <button
+                    onClick={() => setExpandedGame(expandedGame === game.id ? null : game.id)}
+                    style={{
+                      width: "100%", textAlign: "left", background: "var(--surface2)",
+                      border: "1px solid var(--border)", borderRadius: 8,
+                      padding: "5px 10px", fontSize: 12, color: "var(--text-muted)", cursor: "pointer",
+                    }}>
+                    적중자 {game.correctCount}명 {expandedGame === game.id ? "▲" : "▼"}
+                  </button>
+                  {expandedGame === game.id && (
+                    <div style={{
+                      marginTop: 6, padding: "6px 10px",
+                      background: "rgba(34,197,94,0.08)",
+                      borderRadius: 6, fontSize: 13, lineHeight: 1.8,
+                    }}>
+                      {game.correctVoters.map((voter, i) => (
+                        <span key={i}>
+                          {voter.name}{i < game.correctVoters.length - 1 ? "\u00A0 " : ""}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
       )}
     </>
   );
