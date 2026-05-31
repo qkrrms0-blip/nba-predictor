@@ -1,71 +1,119 @@
 // src/lib/nba-api.ts
 
-const BASE_URL = "https://api.balldontlie.io/v1";
-const API_KEY = process.env.BALLDONTLIE_API_KEY!;
+const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba";
 
-const headers = {
-  Authorization: API_KEY,
-  "Content-Type": "application/json",
-};
-
-export interface BDLGame {
-  id: number;
+// ESPN API 실제 응답 타입
+export interface ESPNGame {
+  id: string;
   date: string;
-  datetime: string | null;
-  home_team: { id: number; full_name: string; abbreviation: string };
-  visitor_team: { id: number; full_name: string; abbreviation: string };
-  home_team_score: number;
-  visitor_team_score: number;
-  status: string;
-  period: number;
-  time: string;
-  postseason: boolean;
-  season: number;
+  name: string;
+  competitions: {
+    id: string;
+    date: string;
+    notes: { type: string; headline: string }[];
+    competitors: {
+      id: string;
+      homeAway: "home" | "away";
+      team: {
+        displayName: string;
+        abbreviation: string;
+        logo: string;
+      };
+      score: string;
+      winner?: boolean;
+    }[];
+    status: {
+      type: {
+        name: string;
+        completed: boolean;
+        description: string;
+      };
+    };
+  }[];
+  season: { type: number; year: number };
 }
 
-export async function fetchGamesByDateRange(startDate: string, endDate: string): Promise<BDLGame[]> {
-  const params = new URLSearchParams({
-    start_date: startDate,
-    end_date: endDate,
-    per_page: "100",
-    postseason: "true",
-  });
-  const res = await fetch(`${BASE_URL}/games?${params}`, { headers });
-  if (!res.ok) throw new Error(`BDL API error: ${res.status}`);
-  const json = await res.json();
-  return json.data || [];
+// ESPN notes.headline → Round 타입 매핑
+// 실제 ESPN API 응답 예: "West Finals - Game 7", "First Round - Game 1", "NBA Finals - Game 1"
+function mapESPNHeadlineToRound(headline: string): string {
+  const h = headline.toLowerCase();
+  if (h.includes("play-in") || h.includes("play in")) return "Play-In";
+  if (h.includes("first round") || h.includes("1st round")) return "First Round";
+  if (h.includes("semifinal") || h.includes("second round")) return "Semifinals";
+  if (h.includes("conf") && h.includes("final")) return "Conf. Finals";
+  if (h.includes("nba finals") || h.includes("championship")) return "Finals";
+  return "First Round"; // 폴백
 }
 
-export async function fetchGameById(gameId: number): Promise<BDLGame | null> {
-  const res = await fetch(`${BASE_URL}/games/${gameId}`, { headers });
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.data || null;
+// YYYYMMDD 형식으로 변환
+function toESPNDate(dateStr: string): string {
+  return dateStr.replace(/-/g, "");
 }
 
-export function mapBDLGameToDBGame(game: BDLGame, seasonId: number) {
+export async function fetchGamesByDateRange(
+  startDate: string,
+  endDate: string,
+  seasonType: 2 | 3 = 3 // 2=정규시즌, 3=포스트시즌
+): Promise<ESPNGame[]> {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const allGames: ESPNGame[] = [];
+
+  // ESPN은 날짜 범위를 한 번에 못 받아서 날짜별로 순회
+  const current = new Date(start);
+  while (current <= end) {
+    const dateStr = toESPNDate(current.toISOString().split("T")[0]);
+    const url = `${ESPN_BASE}/scoreboard?dates=${dateStr}&seasontype=${seasonType}&limit=20`;
+
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.events) allGames.push(...json.events);
+      }
+    } catch {
+      // 날짜별 실패 무시하고 계속
+    }
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return allGames;
+}
+
+export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
+  const comp = game.competitions[0];
+  const home = comp.competitors.find((c) => c.homeAway === "home")!;
+  const away = comp.competitors.find((c) => c.homeAway === "away")!;
+
+  const isCompleted = comp.status.type.completed;
+  const homeScore = parseInt(home.score) || null;
+  const awayScore = parseInt(away.score) || null;
+
+  let winner: "home" | "away" | null = null;
+  if (isCompleted && homeScore !== null && awayScore !== null) {
+    if (homeScore > awayScore) winner = "home";
+    else if (awayScore > homeScore) winner = "away";
+  }
+
+  // 라운드 판별: notes[0].headline 사용
+  const headline = comp.notes?.[0]?.headline || "";
+  const round = mapESPNHeadlineToRound(headline);
+
   return {
     season_id: seasonId,
-    home_team: game.home_team.full_name,
-    away_team: game.visitor_team.full_name,
-    home_score: game.home_team_score || null,
-    away_score: game.visitor_team_score || null,
-    start_time: game.datetime || `${game.date}T00:00:00Z`,
-    round: "First Round",
-    winner: determineWinner(game),
-    external_id: `bdl_${game.id}`,
+    home_team: home.team.displayName,
+    away_team: away.team.displayName,
+    home_score: isCompleted ? homeScore : null,
+    away_score: isCompleted ? awayScore : null,
+    start_time: comp.date,
+    round,
+    winner,
+    external_id: `espn_${game.id}`,
   };
 }
 
-function determineWinner(game: BDLGame): "home" | "away" | null {
-  if (game.status !== "Final") return null;
-  if (game.home_team_score > game.visitor_team_score) return "home";
-  if (game.visitor_team_score > game.home_team_score) return "away";
-  return null;
-}
-
-// ESPN CDN 실제 약어 맵 (팀 전체명 → ESPN CDN slug)
-// ESPN CDN URL 형식: https://a.espncdn.com/i/teamlogos/nba/500/{slug}.png
+// ESPN CDN 로고 URL
 const TEAM_ESPN_SLUG: Record<string, string> = {
   "Atlanta Hawks": "atl",
   "Boston Celtics": "bos",
@@ -76,7 +124,7 @@ const TEAM_ESPN_SLUG: Record<string, string> = {
   "Dallas Mavericks": "dal",
   "Denver Nuggets": "den",
   "Detroit Pistons": "det",
-  "Golden State Warriors": "gs",       // 'gsw' 아님 — ESPN은 'gs'
+  "Golden State Warriors": "gs",
   "Houston Rockets": "hou",
   "Indiana Pacers": "ind",
   "LA Clippers": "lac",
@@ -86,25 +134,23 @@ const TEAM_ESPN_SLUG: Record<string, string> = {
   "Miami Heat": "mia",
   "Milwaukee Bucks": "mil",
   "Minnesota Timberwolves": "min",
-  "New Orleans Pelicans": "no",        // 'nop' 아님 — ESPN은 'no'
-  "New York Knicks": "ny",             // ESPN은 'ny'
+  "New Orleans Pelicans": "no",
+  "New York Knicks": "ny",
   "Oklahoma City Thunder": "okc",
   "Orlando Magic": "orl",
   "Philadelphia 76ers": "phi",
   "Phoenix Suns": "phx",
   "Portland Trail Blazers": "por",
   "Sacramento Kings": "sac",
-  "San Antonio Spurs": "sa",           // ESPN은 'sa'
+  "San Antonio Spurs": "sa",
   "Toronto Raptors": "tor",
   "Utah Jazz": "utah",
-  "Washington Wizards": "wsh",         // ESPN은 'wsh'
+  "Washington Wizards": "wsh",
 };
 
-// ESPN CDN 로고 URL
 export function getTeamLogoUrl(teamName: string): string {
   const slug = TEAM_ESPN_SLUG[teamName];
   if (!slug) {
-    // 폴백: 팀명에서 마지막 단어를 소문자로 변환해 시도
     const fallback = teamName.split(" ").pop()?.toLowerCase() || "nba";
     return `https://a.espncdn.com/i/teamlogos/nba/500/${fallback}.png`;
   }

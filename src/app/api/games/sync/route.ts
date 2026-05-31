@@ -1,12 +1,10 @@
 // src/app/api/games/sync/route.ts
-// 관리자용: balldontlie API에서 NBA 경기 동기화
 import { createAdminClient } from "@/lib/supabase/server";
-import { fetchGamesByDateRange, mapBDLGameToDBGame } from "@/lib/nba-api";
+import { fetchGamesByDateRange, mapESPNGameToDBGame } from "@/lib/nba-api";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
-  // 관리자 인증 확인
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,15 +19,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { startDate, endDate, seasonId } = await request.json();
+  // seasonType: 2=정규시즌, 3=포스트시즌(기본값)
+  const { startDate, endDate, seasonId, seasonType = 3 } = await request.json();
 
   try {
-    const games = await fetchGamesByDateRange(startDate, endDate);
+    const games = await fetchGamesByDateRange(startDate, endDate, seasonType);
     const adminSupabase = createAdminClient();
 
     let synced = 0;
     for (const game of games) {
-      const dbGame = mapBDLGameToDBGame(game, seasonId || 1);
+      const dbGame = mapESPNGameToDBGame(game, seasonId || 1);
       const { error } = await adminSupabase
         .from("games")
         .upsert(dbGame, { onConflict: "external_id" });

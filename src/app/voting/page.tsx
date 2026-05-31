@@ -297,7 +297,7 @@ export default function VotingPage() {
       ) : (
         games.map((game) => {
           const closed = isDeadlinePassed(game);
-          const isRegular = game.round === "Regular Season";
+          const isRegular = !ROUND_POINTS[game.round];
           const pts = ROUND_POINTS[game.round];
           const totalVotes = game.totalVotes || 0;
           const homePct = totalVotes > 0 ? Math.round((game.homeVotes || 0) / totalVotes * 100) : 50;
