@@ -1,7 +1,7 @@
 // src/app/history/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { Season } from "@/lib/types";
@@ -39,6 +39,11 @@ export default function HistoryPage() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
+  // 월 캐러셀
+  const monthScrollRef = useRef<HTMLDivElement>(null);
+  const [centeredMonthIndex, setCenteredMonthIndex] = useState(0);
+  const isScrollingProgrammatically = useRef(false);
+
   // 시즌 목록 초기 로드
   useEffect(() => {
     const init = async () => {
@@ -58,7 +63,7 @@ export default function HistoryPage() {
 
   // 현재 월 기준 자동 seasonType 결정
   useEffect(() => {
-    const month = new Date().getMonth() + 1; // 1~12
+    const month = new Date().getMonth() + 1;
     setSeasonTypeFilter(month >= 4 ? "post" : "regular");
   }, []);
 
@@ -135,6 +140,7 @@ export default function HistoryPage() {
     setFilterDay(String(d.getDate()));
     setCalendarOpen(false);
   };
+
   useEffect(() => {
     if (!filterMonth) {
       setDaysWithGames([]);
@@ -166,71 +172,188 @@ export default function HistoryPage() {
     }
   }, [filterDay]);
 
+  // ── 월 캐러셀 로직 ──────────────────────────────────
+  const ITEM_W = 52;   // 중앙 버튼 너비
+  const ITEM_SMALL = 40; // 좌우 버튼 너비
+  const GAP = 8;
+
+  const regularMonths = ["10","11","12","01","02","03","04"];
+  const postMonths    = ["04","05","06"];
+  const labels: Record<string, string> = {
+    "01":"1월","02":"2월","03":"3월","04":"4월","05":"5월",
+    "06":"6월","10":"10월","11":"11월","12":"12월",
+  };
+
+  const months = seasonTypeFilter === "regular" ? regularMonths : postMonths;
+
+  // 초기 스크롤: 정규는 현재 달 기준, POST는 그냥 중앙
+  const getInitialIndex = useCallback((type: "regular" | "post") => {
+    if (type === "post") return 1; // 3개뿐이라 중앙 고정
+    const nowMonth = String(new Date().getMonth() + 1).padStart(2, "0");
+    const idx = regularMonths.indexOf(nowMonth);
+    return idx >= 0 ? idx : 0;
+  }, []);
+
+  // 캐러셀 스크롤 후 중앙 인덱스 감지
+  const onMonthScroll = useCallback(() => {
+    if (isScrollingProgrammatically.current) return;
+    const el = monthScrollRef.current;
+    if (!el) return;
+    const containerCenter = el.scrollLeft + el.clientWidth / 2;
+    let closestIdx = 0;
+    let closestDist = Infinity;
+    const items = el.querySelectorAll<HTMLElement>("[data-month-item]");
+    items.forEach((item, i) => {
+      const itemCenter = item.offsetLeft + item.offsetWidth / 2;
+      const dist = Math.abs(itemCenter - containerCenter);
+      if (dist < closestDist) { closestDist = dist; closestIdx = i; }
+    });
+    setCenteredMonthIndex(closestIdx);
+  }, []);
+
+  // 특정 인덱스로 부드럽게 스크롤
+  const scrollToIndex = useCallback((idx: number) => {
+    const el = monthScrollRef.current;
+    if (!el) return;
+    const items = el.querySelectorAll<HTMLElement>("[data-month-item]");
+    const target = items[idx];
+    if (!target) return;
+    isScrollingProgrammatically.current = true;
+    const targetCenter = target.offsetLeft + target.offsetWidth / 2;
+    const scrollLeft = targetCenter - el.clientWidth / 2;
+    el.scrollTo({ left: scrollLeft, behavior: "smooth" });
+    setCenteredMonthIndex(idx);
+    setTimeout(() => { isScrollingProgrammatically.current = false; }, 400);
+  }, []);
+
+  // seasonType 바뀔 때 초기 위치로
+  useEffect(() => {
+    const idx = getInitialIndex(seasonTypeFilter);
+    setCenteredMonthIndex(idx);
+    // DOM 반영 후 스크롤
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToIndex(idx));
+    });
+  }, [seasonTypeFilter]);
+
+  // 월 버튼 클릭
+  const handleMonthClick = (m: string, idx: number) => {
+    scrollToIndex(idx);
+    setFilterMonth(filterMonth === m ? null : m);
+    setFilterDay(null);
+  };
+  // ────────────────────────────────────────────────────
+
   return (
     <>
-      {/* 한 줄: 시즌 + 정규/POST + 월 스와이프 */}
-      {(() => {
-        const months = seasonTypeFilter === "regular"
-          ? ["10","11","12","01","02","03","04"]
-          : ["04","05","06"];
-        const labels: Record<string, string> = { "01":"1월","02":"2월","03":"3월","04":"4월","05":"5월","06":"6월","10":"10월","11":"11월","12":"12월" };
-        return (
-          <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>
-            <select className="filter-select" style={{ flexShrink: 0, maxWidth: 110, fontSize: 12, padding: "5px 6px" }}
-              value={selectedSeason ?? ""}
-              onChange={(e) => setSelectedSeason(Number(e.target.value))}>
-              {seasons.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.is_active ? "🟢" : "🔴"} {s.name.replace(" Season", "")}
-                </option>
-              ))}
-            </select>
+      {/* ── 상단 고정 필터 바 ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
 
-            <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
-              {(["regular", "post"] as const).map((type) => (
-                <button key={type}
-                  onClick={() => { setSeasonTypeFilter(type); setFilterMonth(null); setFilterDay(null); }}
-                  style={{
-                    padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
-                    background: seasonTypeFilter === type ? "var(--accent)" : "var(--surface2)",
-                    color: seasonTypeFilter === type ? "#fff" : "var(--text-muted)",
-                  }}>
-                  {type === "regular" ? "정규" : "POST"}
-                </button>
-              ))}
-            </div>
+        {/* 시즌 select */}
+        <select
+          className="filter-select"
+          style={{ flexShrink: 0, maxWidth: 110, fontSize: 12, padding: "5px 6px" }}
+          value={selectedSeason ?? ""}
+          onChange={(e) => setSelectedSeason(Number(e.target.value))}
+        >
+          {seasons.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.is_active ? "🟢" : "🔴"} {s.name.replace(" Season", "")}
+            </option>
+          ))}
+        </select>
 
-            <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
+        {/* 정규 / POST 토글 */}
+        <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
+          {(["regular", "post"] as const).map((type) => (
+            <button key={type}
+              onClick={() => { setSeasonTypeFilter(type); setFilterMonth(null); setFilterDay(null); }}
+              style={{
+                padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
+                background: seasonTypeFilter === type ? "var(--accent)" : "var(--surface2)",
+                color: seasonTypeFilter === type ? "#fff" : "var(--text-muted)",
+              }}>
+              {type === "regular" ? "정규" : "POST"}
+            </button>
+          ))}
+        </div>
 
-            {months.map((m) => (
-              <button key={m}
-                onClick={() => setFilterMonth(filterMonth === m ? null : m)}
+        {/* 구분선 */}
+        <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
+
+        {/* ── 월 캐러셀 ── */}
+        <div
+          ref={monthScrollRef}
+          onScroll={onMonthScroll}
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: GAP,
+            overflowX: "auto",
+            scrollbarWidth: "none",
+            scrollSnapType: "x mandatory",
+            WebkitOverflowScrolling: "touch",
+            // 양쪽에 padding 줘서 첫·마지막 아이템도 중앙에 올 수 있게
+            paddingLeft: "calc(50% - 26px)",
+            paddingRight: "calc(50% - 26px)",
+          }}
+        >
+          {months.map((m, idx) => {
+            const dist = Math.abs(idx - centeredMonthIndex);
+            const isCenter = dist === 0;
+            const isAdjacent = dist === 1;
+            const isActive = filterMonth === m;
+
+            // 크기: 중앙 > 인접 > 나머지
+            const scale = isCenter ? 1 : isAdjacent ? 0.85 : 0.7;
+            const opacity = isCenter ? 1 : isAdjacent ? 0.7 : 0.45;
+            const fontSize = isCenter ? 13 : 12;
+            const paddingH = isCenter ? 14 : 10;
+
+            return (
+              <button
+                key={m}
+                data-month-item
+                onClick={() => handleMonthClick(m, idx)}
                 style={{
-                  flexShrink: 0, padding: "5px 10px", borderRadius: 20,
-                  background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
-                  color: filterMonth === m ? "#fff" : "var(--text-muted)",
-                  border: filterMonth === m ? "none" : "1px solid var(--border)",
-                  fontWeight: 600, fontSize: 12, cursor: "pointer", transition: "all 0.15s",
-                }}>
+                  flexShrink: 0,
+                  scrollSnapAlign: "center",
+                  padding: `5px ${paddingH}px`,
+                  borderRadius: 20,
+                  background: isActive ? "var(--accent)" : "var(--surface2)",
+                  color: isActive ? "#fff" : "var(--text-muted)",
+                  border: isActive ? "none" : "1px solid var(--border)",
+                  fontWeight: 600,
+                  fontSize,
+                  cursor: "pointer",
+                  transform: `scale(${scale})`,
+                  opacity,
+                  transition: "transform 0.2s ease, opacity 0.2s ease, font-size 0.2s ease, background 0.15s",
+                  transformOrigin: "center",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {labels[m]}
               </button>
-            ))}
+            );
+          })}
+        </div>
 
-            {/* 달력 버튼 */}
-            <button
-              onClick={() => setCalendarOpen(!calendarOpen)}
-              style={{
-                marginLeft: "auto", flexShrink: 0, width: 32, height: 32,
-                borderRadius: 8, border: "1px solid var(--border)",
-                background: calendarOpen ? "var(--accent)" : "var(--surface2)",
-                color: calendarOpen ? "#fff" : "var(--text-muted)",
-                cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-              📅
-            </button>
-          </div>
-        );
-      })()}
+        {/* 달력 버튼 */}
+        <button
+          onClick={() => setCalendarOpen(!calendarOpen)}
+          style={{
+            marginLeft: 4, flexShrink: 0, width: 32, height: 32,
+            borderRadius: 8, border: "1px solid var(--border)",
+            background: calendarOpen ? "var(--accent)" : "var(--surface2)",
+            color: calendarOpen ? "#fff" : "var(--text-muted)",
+            cursor: "pointer", fontSize: 16,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+          📅
+        </button>
+      </div>
 
       {/* 달력 패널 */}
       {calendarOpen && (
@@ -304,27 +427,40 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* 날짜 선택 (경기 있는 날만 원형) */}
+      {/* ── 일 선택 버튼 (월 버튼과 동일 스타일) ── */}
       {filterMonth && daysWithGames.length > 0 && (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14, justifyContent: "center" }}>
-          <button onClick={() => setFilterDay(null)}
+        <div style={{
+          display: "flex", gap: 6, flexWrap: "wrap",
+          marginBottom: 14,
+          paddingLeft: 2,
+        }}>
+          {/* 전체 버튼 */}
+          <button
+            onClick={() => setFilterDay(null)}
             style={{
-              width: 40, height: 40, borderRadius: "50%",
+              padding: "5px 14px", borderRadius: 20,
               background: filterDay === null ? "var(--accent2)" : "var(--surface2)",
               color: filterDay === null ? "#fff" : "var(--text-muted)",
               border: filterDay === null ? "none" : "1px solid var(--border)",
-              fontWeight: 600, fontSize: 11, cursor: "pointer",
-            }}>전체</button>
+              fontWeight: 600, fontSize: 13, cursor: "pointer",
+              transition: "all 0.15s",
+              whiteSpace: "nowrap",
+            }}>
+            전체
+          </button>
+
           {daysWithGames.map((day) => (
             <button key={day} onClick={() => setFilterDay(String(day))}
               style={{
-                width: 40, height: 40, borderRadius: "50%",
+                padding: "5px 12px", borderRadius: 20,
                 background: filterDay === String(day) ? "var(--accent2)" : "var(--surface2)",
                 color: filterDay === String(day) ? "#fff" : "var(--text)",
                 border: filterDay === String(day) ? "none" : "1px solid var(--border)",
                 fontWeight: 600, fontSize: 13, cursor: "pointer",
+                transition: "all 0.15s",
+                whiteSpace: "nowrap",
               }}>
-              {day}
+              {day}일
             </button>
           ))}
         </div>
@@ -344,7 +480,6 @@ export default function HistoryPage() {
           const homeAbbr = game.home_team.split(" ").slice(-1)[0];
           const awayAbbr = game.away_team.split(" ").slice(-1)[0];
 
-          // 테두리 색 결정
           let borderColor = "var(--border)";
           if (game.myIsCorrect === true) borderColor = "#3b82f6";
           else if (game.myIsCorrect === false) borderColor = "#ef4444";
@@ -361,7 +496,7 @@ export default function HistoryPage() {
               {/* 3컬럼 메인 행 */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
 
-                {/* 좌: 라운드 + 날짜시간 (중앙정렬) */}
+                {/* 좌: 라운드 + 날짜시간 */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0, minWidth: 72 }}>
                   {game.round && <span className="round-badge" style={{ fontSize: 10, padding: "2px 6px" }}>{game.round}</span>}
                   <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
@@ -382,7 +517,7 @@ export default function HistoryPage() {
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
                 </div>
 
-                {/* 우: 완료뱃지 + 승리팀 (우측정렬) */}
+                {/* 우: 완료뱃지 + 승리팀 */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
                   <span className="badge badge-correct">완료</span>
                   <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
