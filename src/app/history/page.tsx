@@ -36,6 +36,8 @@ export default function HistoryPage() {
   const [expandedGame, setExpandedGame] = useState<number | null>(null);
   const [userId, setUserId] = useState<string>("");
   const [seasonTypeFilter, setSeasonTypeFilter] = useState<"regular" | "post">("post");
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   // 시즌 목록 초기 로드
   useEffect(() => {
@@ -119,7 +121,20 @@ export default function HistoryPage() {
     (g) => !g.season_type || g.season_type === seasonTypeFilter
   );
 
-  // 월 선택 시 해당 월의 경기 있는 날짜 계산
+  // 날짜별 경기 수 맵 (달력용)
+  const gameDayMap: Record<string, number> = {};
+  seasonFilteredGames.forEach((g) => {
+    const key = format(new Date(g.start_time), "yyyy-MM-dd");
+    gameDayMap[key] = (gameDayMap[key] || 0) + 1;
+  });
+
+  // 달력 날짜 클릭
+  const handleCalendarDay = (dateStr: string) => {
+    const d = new Date(dateStr);
+    setFilterMonth(format(d, "MM"));
+    setFilterDay(String(d.getDate()));
+    setCalendarOpen(false);
+  };
   useEffect(() => {
     if (!filterMonth) {
       setDaysWithGames([]);
@@ -161,7 +176,6 @@ export default function HistoryPage() {
         const labels: Record<string, string> = { "01":"1월","02":"2월","03":"3월","04":"4월","05":"5월","06":"6월","10":"10월","11":"11월","12":"12월" };
         return (
           <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>
-            {/* 시즌 선택 - 고정 */}
             <select className="filter-select" style={{ flexShrink: 0, maxWidth: 110, fontSize: 12, padding: "5px 6px" }}
               value={selectedSeason ?? ""}
               onChange={(e) => setSelectedSeason(Number(e.target.value))}>
@@ -172,7 +186,6 @@ export default function HistoryPage() {
               ))}
             </select>
 
-            {/* 정규/POST 탭 - 고정 */}
             <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
               {(["regular", "post"] as const).map((type) => (
                 <button key={type}
@@ -187,10 +200,8 @@ export default function HistoryPage() {
               ))}
             </div>
 
-            {/* 구분선 */}
             <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
 
-            {/* 월 스와이프 영역 */}
             {months.map((m) => (
               <button key={m}
                 onClick={() => setFilterMonth(filterMonth === m ? null : m)}
@@ -204,9 +215,94 @@ export default function HistoryPage() {
                 {labels[m]}
               </button>
             ))}
+
+            {/* 달력 버튼 */}
+            <button
+              onClick={() => setCalendarOpen(!calendarOpen)}
+              style={{
+                marginLeft: "auto", flexShrink: 0, width: 32, height: 32,
+                borderRadius: 8, border: "1px solid var(--border)",
+                background: calendarOpen ? "var(--accent)" : "var(--surface2)",
+                color: calendarOpen ? "#fff" : "var(--text-muted)",
+                cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+              📅
+            </button>
           </div>
         );
       })()}
+
+      {/* 달력 패널 */}
+      {calendarOpen && (
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: "var(--radius)", padding: "12px", marginBottom: 10,
+        }}>
+          {/* 달력 헤더 */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+              style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>
+              ‹
+            </button>
+            <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>
+              {calendarMonth.toLocaleDateString("ko-KR", { year: "numeric", month: "long" })}
+            </span>
+            <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+              style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>
+              ›
+            </button>
+          </div>
+
+          {/* 요일 헤더 */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+            {["일","월","화","수","목","금","토"].map(d => (
+              <div key={d} style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, padding: "2px 0" }}>{d}</div>
+            ))}
+          </div>
+
+          {/* 날짜 그리드 */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {(() => {
+              const year = calendarMonth.getFullYear();
+              const month = calendarMonth.getMonth();
+              const firstDow = new Date(year, month, 1).getDay();
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              const cells = [];
+
+              for (let i = 0; i < firstDow; i++) {
+                cells.push(<div key={`empty-${i}`} />);
+              }
+
+              for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                const cnt = gameDayMap[dateStr] || 0;
+                const isSelected = filterDay === String(d) && filterMonth === String(month + 1).padStart(2, "0");
+                cells.push(
+                  <div key={d}
+                    onClick={() => cnt > 0 ? handleCalendarDay(dateStr) : undefined}
+                    style={{
+                      textAlign: "center", padding: "4px 2px", borderRadius: 8,
+                      cursor: cnt > 0 ? "pointer" : "default",
+                      background: isSelected ? "var(--accent)" : "transparent",
+                      transition: "background 0.15s",
+                      minHeight: 44, display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center", gap: 2,
+                      opacity: cnt === 0 ? 0.25 : 1,
+                    }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isSelected ? "#fff" : "var(--text)", lineHeight: 1 }}>{d}</span>
+                    {cnt > 0 && (
+                      <span style={{ fontSize: 9, fontWeight: 600, color: isSelected ? "#fff" : "var(--accent)", letterSpacing: 0.3 }}>
+                        {cnt}G
+                      </span>
+                    )}
+                  </div>
+                );
+              }
+              return cells;
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* 날짜 선택 (경기 있는 날만 원형) */}
       {filterMonth && daysWithGames.length > 0 && (
