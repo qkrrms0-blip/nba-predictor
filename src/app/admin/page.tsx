@@ -437,18 +437,20 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* 날짜 범위 - 각각 전체 폭 (모바일 침범 방지) */}
-                <div className="form-group">
-                  <label className="form-label">시작일</label>
-                  <input type="date" className="text-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block" }}
-                    value={espnStartDate}
-                    onChange={(e) => setEspnStartDate(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">종료일</label>
-                  <input type="date" className="text-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block" }}
-                    value={espnEndDate}
-                    onChange={(e) => setEspnEndDate(e.target.value)} />
+                {/* 날짜 범위 2열 */}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+                    <label className="form-label">시작일</label>
+                    <input type="date" className="text-input"
+                      value={espnStartDate}
+                      onChange={(e) => setEspnStartDate(e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+                    <label className="form-label">종료일</label>
+                    <input type="date" className="text-input"
+                      value={espnEndDate}
+                      onChange={(e) => setEspnEndDate(e.target.value)} />
+                  </div>
                 </div>
 
                 <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>
@@ -531,18 +533,20 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* 시작시간 / 마감시간 - 각각 전체 폭 (날짜피커 침범 방지) */}
-                    <div className="form-group">
-                      <label className="form-label">경기 시작시간</label>
-                      <input type="datetime-local" className="text-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block" }}
-                        value={newGame.start_time}
-                        onChange={(e) => setNewGame({ ...newGame, start_time: e.target.value })} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">투표 마감시간</label>
-                      <input type="datetime-local" className="text-input" style={{ width: "100%", maxWidth: "100%", boxSizing: "border-box", display: "block" }}
-                        value={newGame.vote_deadline}
-                        onChange={(e) => setNewGame({ ...newGame, vote_deadline: e.target.value })} />
+                    {/* 시작시간 / 마감시간 2열 */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+                        <label className="form-label">경기 시작시간</label>
+                        <input type="datetime-local" className="text-input"
+                          value={newGame.start_time}
+                          onChange={(e) => setNewGame({ ...newGame, start_time: e.target.value })} />
+                      </div>
+                      <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+                        <label className="form-label">투표 마감시간</label>
+                        <input type="datetime-local" className="text-input"
+                          value={newGame.vote_deadline}
+                          onChange={(e) => setNewGame({ ...newGame, vote_deadline: e.target.value })} />
+                      </div>
                     </div>
 
                     {/* 라운드 / 시즌 - 모바일에서 세로, PC에서 가로 */}
