@@ -306,10 +306,28 @@ export default function VotingPage() {
           return (
             <div key={game.id} className="game-card-compact">
               {/* 팀 로고 + 원형버튼 + VS메타 */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
 
-                {/* 홈팀: 원형버튼 | 로고 */}
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                {/* 왼쪽: 포스트시즌 라운드명 */}
+                <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {!isRegular && (
+                    <span style={{
+                      fontSize: 9, color: "var(--accent)", fontWeight: 700,
+                      textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all",
+                    }}>
+                      {game.round.replace(" ", "\n")}
+                      {pts ? `\n·${pts}pt` : ""}
+                    </span>
+                  )}
+                </div>
+
+                {/* 홈팀: 로고 | 원형버튼 (VS쪽에 버튼) */}
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                  <img
+                    src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
+                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
                   <button
                     className={`vote-circle-btn${game.myVote?.voted_team === "home" ? " selected-home" : ""}`}
                     onClick={() => !closed && handleVote(game.id, "home", game.season_id)}
@@ -317,18 +335,10 @@ export default function VotingPage() {
                   >
                     {game.myVote?.voted_team === "home" ? "✓" : "승"}
                   </button>
-                  <img
-                    src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
-                    style={{ width: 38, height: 38, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                  />
                 </div>
 
-                {/* 가운데 VS 메타블록: 라운드 / 시간 / VS / 마감 */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, minWidth: 82 }}>
-                  <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                    {game.round}{!isRegular && ` · ${pts}pt`}
-                  </span>
+                {/* 가운데 VS 메타블록: 시간 / VS / 마감 */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, minWidth: 72 }}>
                   <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                     {format(new Date(game.start_time), "HH:mm")}
                   </span>
@@ -344,13 +354,8 @@ export default function VotingPage() {
                   )}
                 </div>
 
-                {/* 원정팀: 로고 | 원형버튼 */}
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 8 }}>
-                  <img
-                    src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
-                    style={{ width: 38, height: 38, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                  />
+                {/* 원정팀: 원형버튼 | 로고 (VS쪽에 버튼) */}
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 6 }}>
                   <button
                     className={`vote-circle-btn${game.myVote?.voted_team === "away" ? " selected-away" : ""}`}
                     onClick={() => !closed && handleVote(game.id, "away", game.season_id)}
@@ -358,6 +363,11 @@ export default function VotingPage() {
                   >
                     {game.myVote?.voted_team === "away" ? "✓" : "승"}
                   </button>
+                  <img
+                    src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
+                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
                 </div>
               </div>
 
