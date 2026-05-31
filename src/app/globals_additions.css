@@ -4,8 +4,8 @@
 
 /* 랭킹 카드 위아래 여백 축소 */
 .rank-card {
-  padding: 10px 14px;  /* 기존 14px 16px → 축소 */
-  margin-bottom: 6px;  /* 기존 8px → 축소 */
+  padding: 8px 14px !important;
+  margin-bottom: 4px !important;
 }
 
 /* 투표 탭 — 컴팩트 경기 카드 */
@@ -13,7 +13,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px 12px;      /* 기존 20px 16px → 대폭 축소 */
+  padding: 8px 12px;
   margin-bottom: 8px;
   transition: border-color 0.2s;
 }
@@ -44,21 +44,24 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .home-side {
-  justify-content: flex-end;   /* 버튼+로고를 VS 쪽으로 붙임 */
-  flex-direction: row-reverse; /* 순서: 버튼→로고 (왼→오) */
+  justify-content: flex-end;
+  flex-direction: row-reverse;
 }
 
 .away-side {
-  justify-content: flex-start; /* 로고+버튼을 VS 쪽에서 시작 */
+  justify-content: flex-start;
 }
 
-/* 작은 팀 로고 */
+/* 작은 팀 로고 — 크기 강제 고정 */
 .team-logo-sm {
-  width: 32px;
-  height: 32px;
+  width: 32px !important;
+  height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
@@ -77,6 +80,8 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .vote-btn-inline:hover {
@@ -111,7 +116,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  min-width: 44px;
+  min-width: 36px;
 }
 
 .vs-center .vs-text {
@@ -122,7 +127,7 @@
 
 .vs-center .score-display {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 18px;
   color: var(--text);
   letter-spacing: 1px;
 }
@@ -137,5 +142,5 @@
 
 /* 날짜 탭 여백 축소 */
 .date-tabs {
-  padding: 6px 0 6px;  /* 기존 16px 0 8px → 축소 */
+  padding: 6px 0 !important;
 }
