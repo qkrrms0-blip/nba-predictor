@@ -19,18 +19,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // seasonType: 2=정규시즌, 3=포스트시즌(기본값)
-  const { startDate, endDate, seasonId, seasonType = 3 } = await request.json();
+  // seasonType 파라미터 제거 - ESPN 응답에서 자동 판단
+  // seasonId 파라미터 제거 - 활성 시즌 자동 사용
+  const { startDate, endDate } = await request.json();
+
+  // 활성 시즌 자동 조회
+  const { data: activeSeason } = await supabase
+    .from("seasons")
+    .select("id, name")
+    .eq("is_active", true)
+    .single();
+
+  if (!activeSeason) {
+    return NextResponse.json({ error: "활성 시즌이 없습니다. 시즌 탭에서 시즌을 시작해주세요." }, { status: 400 });
+  }
 
   try {
-    const games = await fetchGamesByDateRange(startDate, endDate, seasonType);
+    // seasonType 없이 호출 - 정규+포스트 둘 다 자동으로 가져옴
+    const games = await fetchGamesByDateRange(startDate, endDate);
     const adminSupabase = createAdminClient();
 
     let synced = 0;
     const errors: { game: string; message: string; details: string }[] = [];
 
     for (const game of games) {
-      const dbGame = mapESPNGameToDBGame(game, seasonId || 1, seasonType);
+      // seasonType 파라미터 없이 호출 - ESPN 응답에서 직접 읽음
+      const dbGame = mapESPNGameToDBGame(game, activeSeason.id);
       const { error } = await adminSupabase
         .from("games")
         .upsert(dbGame, { onConflict: "external_id" });
@@ -50,8 +64,9 @@ export async function POST(request: Request) {
       success: true,
       synced,
       total: games.length,
+      seasonName: activeSeason.name,
       errors,
-      sample: games[0] ? mapESPNGameToDBGame(games[0], seasonId || 1, seasonType) : null,
+      sample: games[0] ? mapESPNGameToDBGame(games[0], activeSeason.id) : null,
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

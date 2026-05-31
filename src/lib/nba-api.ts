@@ -34,7 +34,6 @@ export interface ESPNGame {
 }
 
 // ESPN notes.headline → Round 타입 매핑
-// 실제 ESPN API 응답 예: "West Finals - Game 7", "First Round - Game 1", "NBA Finals - Game 1"
 function mapESPNHeadlineToRound(headline: string): string {
   const h = headline.toLowerCase();
   if (h.includes("play-in") || h.includes("play in")) return "Play-In";
@@ -53,26 +52,36 @@ function toESPNDate(dateStr: string): string {
 export async function fetchGamesByDateRange(
   startDate: string,
   endDate: string,
-  seasonType: 2 | 3 = 3 // 2=정규시즌, 3=포스트시즌
 ): Promise<ESPNGame[]> {
   const start = new Date(startDate);
   const end = new Date(endDate);
   const allGames: ESPNGame[] = [];
+  const seenIds = new Set<string>();
 
   // ESPN은 날짜 범위를 한 번에 못 받아서 날짜별로 순회
+  // 정규(2) + 포스트(3) 둘 다 요청 - ESPN은 seasontype이 맞지 않으면 빈 배열 반환하므로 중복 없음
   const current = new Date(start);
   while (current <= end) {
     const dateStr = toESPNDate(current.toISOString().split("T")[0]);
-    const url = `${ESPN_BASE}/scoreboard?dates=${dateStr}&seasontype=${seasonType}&limit=20`;
 
-    try {
-      const res = await fetch(url);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.events) allGames.push(...json.events);
+    for (const seasonType of [2, 3] as const) {
+      const url = `${ESPN_BASE}/scoreboard?dates=${dateStr}&seasontype=${seasonType}&limit=20`;
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.events) {
+            for (const event of json.events) {
+              if (!seenIds.has(event.id)) {
+                seenIds.add(event.id);
+                allGames.push(event);
+              }
+            }
+          }
+        }
+      } catch {
+        // 날짜별 실패 무시하고 계속
       }
-    } catch {
-      // 날짜별 실패 무시하고 계속
     }
 
     current.setDate(current.getDate() + 1);
@@ -81,7 +90,8 @@ export async function fetchGamesByDateRange(
   return allGames;
 }
 
-export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number, seasonType: 2 | 3 = 3) {
+// seasonType 파라미터 제거 - ESPN 응답의 game.season.type에서 직접 읽음
+export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
   const comp = game.competitions[0];
   const home = comp.competitors.find((c) => c.homeAway === "home")!;
   const away = comp.competitors.find((c) => c.homeAway === "away")!;
@@ -100,9 +110,13 @@ export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number, seasonType
   const headline = comp.notes?.[0]?.headline || "";
   const round = mapESPNHeadlineToRound(headline);
 
-  // 투표 마감: 경기 시작 1시간 전 (한국시간 기준으로 저장)
+  // 투표 마감: 경기 시작 1시간 전
   const startTime = new Date(comp.date);
   const voteDeadline = new Date(startTime.getTime() - 60 * 60 * 1000);
+
+  // season_type: ESPN game.season.type에서 직접 읽음 (2=정규, 3=포스트)
+  const seasonType = game.season?.type;
+  const season_type = seasonType === 2 ? "regular" : "post";
 
   return {
     season_id: seasonId,
@@ -114,7 +128,7 @@ export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number, seasonType
     vote_deadline: voteDeadline.toISOString(),
     round,
     winner,
-    season_type: seasonType === 2 ? "regular" : "post",
+    season_type,
     external_id: `espn_${game.id}`,
   };
 }

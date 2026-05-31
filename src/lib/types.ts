@@ -25,6 +25,7 @@ export interface Season {
   name: string;
   is_active: boolean;
   started_at: string;
+  last_espn_sync?: string | null;
 }
 
 export interface Game {

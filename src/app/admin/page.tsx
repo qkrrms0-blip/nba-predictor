@@ -147,10 +147,9 @@ export default function AdminPage() {
   // ESPN 연동
   const [espnStartDate, setEspnStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [espnEndDate, setEspnEndDate] = useState(format(addDays(new Date(), 30), "yyyy-MM-dd"));
-  const [espnSeasonType, setEspnSeasonType] = useState<2 | 3>(3);
-  const [espnSeasonId, setEspnSeasonId] = useState(1);
   const [espnLoading, setEspnLoading] = useState(false);
   const [espnResult, setEspnResult] = useState<string>("");
+  const [espnLastSync, setEspnLastSync] = useState<string>("");
   const [gradeLoading, setGradeLoading] = useState(false);
   // 채점 완료 경기 섹션 접기/펼치기 (기본: 접힘)
   const [completedSectionOpen, setCompletedSectionOpen] = useState(false);
@@ -185,7 +184,7 @@ export default function AdminPage() {
       const active = (seasonData || []).find((s: Season) => s.is_active);
       if (active) {
         setNewGame((g) => ({ ...g, season_id: active.id }));
-        setEspnSeasonId(active.id);
+        if (active.last_espn_sync) setEspnLastSync(active.last_espn_sync);
       }
       await loadAllGames();
     } else if (tab === "seasons") {
@@ -277,6 +276,12 @@ export default function AdminPage() {
     if (espnLoading) return;
     setEspnLoading(true);
     setEspnResult("");
+    const activeSeasonId = seasons.find((s) => s.is_active)?.id;
+    if (!activeSeasonId) {
+      setEspnResult("❌ 활성 시즌이 없습니다");
+      setEspnLoading(false);
+      return;
+    }
     try {
       const res = await fetch("/api/games/sync", {
         method: "POST",
@@ -284,13 +289,18 @@ export default function AdminPage() {
         body: JSON.stringify({
           startDate: espnStartDate,
           endDate: espnEndDate,
-          seasonType: espnSeasonType,
-          seasonId: espnSeasonId,
+          seasonId: activeSeasonId,
         }),
       });
       const json = await res.json();
       if (json.success) {
         setEspnResult(`✅ ${json.total}경기 중 ${json.synced}경기 등록 완료`);
+        const today = format(new Date(), "yyyy-MM-dd");
+        setEspnLastSync(today);
+        const activeSeasonId = seasons.find((s) => s.is_active)?.id;
+        if (activeSeasonId) {
+          await supabase.from("seasons").update({ last_espn_sync: today }).eq("id", activeSeasonId);
+        }
         loadData();
       } else {
         setEspnResult(`❌ 오류: ${json.error}`);
@@ -404,45 +414,9 @@ export default function AdminPage() {
                 <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
                   🏀 ESPN 경기 자동 등록
                 </div>
-
-                {/* 시즌 타입 */}
-                <div className="form-group">
-                  <label className="form-label">시즌 구분</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      onClick={() => setEspnSeasonType(3)}
-                      style={{
-                        flex: 1, padding: "8px", borderRadius: 8, fontSize: 13, fontWeight: 600,
-                        cursor: "pointer", border: "none",
-                        background: espnSeasonType === 3 ? "var(--accent)" : "var(--surface2)",
-                        color: espnSeasonType === 3 ? "#fff" : "var(--text-muted)",
-                      }}>
-                      포스트시즌
-                    </button>
-                    <button
-                      onClick={() => setEspnSeasonType(2)}
-                      style={{
-                        flex: 1, padding: "8px", borderRadius: 8, fontSize: 13, fontWeight: 600,
-                        cursor: "pointer", border: "none",
-                        background: espnSeasonType === 2 ? "var(--accent)" : "var(--surface2)",
-                        color: espnSeasonType === 2 ? "#fff" : "var(--text-muted)",
-                      }}>
-                      정규시즌
-                    </button>
-                  </div>
-                </div>
-
-                {/* 시즌 선택 */}
-                <div className="form-group">
-                  <label className="form-label">시즌</label>
-                  <select className="filter-select" style={{ width: "100%" }}
-                    value={espnSeasonId}
-                    onChange={(e) => setEspnSeasonId(Number(e.target.value))}>
-                    {seasons.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                </div>
+                <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>
+                  * 시즌 구분(정규/포스트)은 ESPN에서 자동으로 가져옵니다. 활성 시즌에 자동 등록됩니다.
+                </p>
 
                 {/* 날짜 범위 2열 */}
                 <div style={{ display: "flex", gap: 8 }}>
@@ -460,9 +434,26 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>
-                  * 범위가 넓으면 시간이 걸릴 수 있어요. 월 단위로 나눠서 등록을 권장합니다.
-                </p>
+                {/* 권장 문구 + 마지막 실행 날짜 뱃지 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+                    * 범위가 넓으면 시간이 걸릴 수 있어요. 월 단위 등록을 권장합니다.
+                  </p>
+                  {espnLastSync && (
+                    <span style={{
+                      border: "1.5px solid #39ff6a",
+                      borderRadius: 20,
+                      padding: "2px 10px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#39ff6a",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}>
+                      {espnLastSync}
+                    </span>
+                  )}
+                </div>
 
                 <button className="btn-primary" style={{ width: "100%" }}
                   onClick={syncESPN} disabled={espnLoading}>
@@ -556,24 +547,14 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* 라운드 / 시즌 - 모바일에서 세로, PC에서 가로 */}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
-                        <label className="form-label">라운드</label>
-                        <select className="filter-select" style={{ width: "100%" }}
-                          value={newGame.round}
-                          onChange={(e) => setNewGame({ ...newGame, round: e.target.value as Round })}>
-                          {ROUNDS.map((r) => <option key={r} value={r}>{r} ({ROUND_POINTS[r]}점)</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
-                        <label className="form-label">시즌</label>
-                        <select className="filter-select" style={{ width: "100%" }}
-                          value={newGame.season_id}
-                          onChange={(e) => setNewGame({ ...newGame, season_id: Number(e.target.value) })}>
-                          {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
-                      </div>
+                    {/* 라운드 */}
+                    <div className="form-group">
+                      <label className="form-label">라운드</label>
+                      <select className="filter-select" style={{ width: "100%" }}
+                        value={newGame.round}
+                        onChange={(e) => setNewGame({ ...newGame, round: e.target.value as Round })}>
+                        {ROUNDS.map((r) => <option key={r} value={r}>{r} ({ROUND_POINTS[r]}점)</option>)}
+                      </select>
                     </div>
 
                     <button className="btn-primary" style={{ width: "100%" }} onClick={addGame}>
