@@ -414,9 +414,6 @@ export default function AdminPage() {
                 <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
                   🏀 ESPN 경기 자동 등록
                 </div>
-                <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>
-                  * 시즌 구분(정규/포스트)은 ESPN에서 자동으로 가져옵니다. 활성 시즌에 자동 등록됩니다.
-                </p>
 
                 {/* 날짜 범위 2열 */}
                 <div style={{ display: "flex", gap: 8 }}>
@@ -437,7 +434,7 @@ export default function AdminPage() {
                 {/* 권장 문구 + 마지막 실행 날짜 뱃지 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
                   <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
-                    * 범위가 넓으면 시간이 걸릴 수 있어요. 월 단위 등록을 권장합니다.
+                    * 월 단위 등록을 권장합니다.
                   </p>
                   {espnLastSync && (
                     <span style={{
