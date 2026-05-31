@@ -372,7 +372,11 @@ export default function AdminPage() {
   const [pendingGames, setPendingGames] = useState<Game[]>([]);
   useEffect(() => {
     if (tab !== "games") return;
-    supabase.from("games").select("*").is("winner", null).order("start_time", { ascending: false }).limit(30)
+    // KST(UTC+9) 기준 오늘 자정까지 (미래 경기 제외)
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const kstDateStr = kstNow.toISOString().slice(0, 10);
+    const todayEnd = new Date(kstDateStr + "T23:59:59+09:00");
+    supabase.from("games").select("*").is("winner", null).lte("start_time", todayEnd.toISOString()).order("start_time", { ascending: true })
       .then(({ data }) => setPendingGames(data || []));
   }, [tab, allGames]);
 
