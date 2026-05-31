@@ -348,8 +348,13 @@ export default function VotingPage() {
                   )}
                 </div>
 
-                {/* 원정팀: 원형버튼 | 로고 (VS쪽에 버튼) */}
+                {/* 원정팀: 로고(VS쪽) | 버튼(바깥) */}
                 <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 6 }}>
+                  <img
+                    src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
+                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
                   <button
                     className={`vote-circle-btn${game.myVote?.voted_team === "away" ? " selected-away" : ""}`}
                     onClick={() => !closed && handleVote(game.id, "away", game.season_id)}
@@ -357,11 +362,6 @@ export default function VotingPage() {
                   >
                     {game.myVote?.voted_team === "away" ? "✓" : "승"}
                   </button>
-                  <img
-                    src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
-                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                  />
                 </div>
               </div>
 
