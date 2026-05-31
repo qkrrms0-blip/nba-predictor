@@ -27,16 +27,32 @@ export async function POST(request: Request) {
     const adminSupabase = createAdminClient();
 
     let synced = 0;
+    const errors: { game: string; message: string; details: string }[] = [];
+
     for (const game of games) {
       const dbGame = mapESPNGameToDBGame(game, seasonId || 1);
       const { error } = await adminSupabase
         .from("games")
         .upsert(dbGame, { onConflict: "external_id" });
 
-      if (!error) synced++;
+      if (error) {
+        errors.push({
+          game: dbGame.external_id,
+          message: error.message,
+          details: error.details ?? "",
+        });
+      } else {
+        synced++;
+      }
     }
 
-    return NextResponse.json({ success: true, synced, total: games.length });
+    return NextResponse.json({
+      success: true,
+      synced,
+      total: games.length,
+      errors,
+      sample: games[0] ? mapESPNGameToDBGame(games[0], seasonId || 1) : null,
+    });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
