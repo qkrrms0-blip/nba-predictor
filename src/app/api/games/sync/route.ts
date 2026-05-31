@@ -21,7 +21,6 @@ export async function POST(request: Request) {
 
   const { startDate, endDate } = await request.json();
 
-  // 활성 시즌 자동 조회
   const { data: activeSeason } = await supabase
     .from("seasons")
     .select("id, name")
@@ -36,43 +35,56 @@ export async function POST(request: Request) {
     const games = await fetchGamesByDateRange(startDate, endDate);
     const adminSupabase = createAdminClient();
 
-    // 해당 범위의 external_id 목록을 한 번에 조회해서 신규/업데이트 구분
+    // 기존 경기 external_id + winner 한 번에 조회
     const externalIds = games.map((g) => `espn_${g.id}`);
     const { data: existing } = await adminSupabase
       .from("games")
-      .select("external_id")
+      .select("external_id, winner")
       .in("external_id", externalIds);
 
-    const existingIds = new Set((existing || []).map((g: { external_id: string }) => g.external_id));
+    // Map으로 기존 winner 저장
+    const existingMap = new Map(
+      (existing || []).map((g: { external_id: string; winner: string | null }) => [g.external_id, g.winner])
+    );
 
-    let inserted = 0; // 신규
-    let updated = 0;  // 업데이트
+    let inserted = 0;
+    let updated = 0;
+    let unchanged = 0;
     const errors: { game: string; message: string; details: string }[] = [];
 
     for (const game of games) {
       const dbGame = mapESPNGameToDBGame(game, activeSeason.id);
-      const isNew = !existingIds.has(dbGame.external_id);
+      const existingWinner = existingMap.get(dbGame.external_id);
 
+      // 신규
+      if (!existingMap.has(dbGame.external_id)) {
+        const { error } = await adminSupabase
+          .from("games")
+          .upsert(dbGame, { onConflict: "external_id" });
+        if (error) errors.push({ game: dbGame.external_id, message: error.message, details: error.details ?? "" });
+        else inserted++;
+        continue;
+      }
+
+      // 기존 winner와 ESPN winner가 같으면 변경 없음 (upsert 스킵)
+      if (existingWinner === dbGame.winner) {
+        unchanged++;
+        continue;
+      }
+
+      // winner가 달라진 경우만 upsert
       const { error } = await adminSupabase
         .from("games")
         .upsert(dbGame, { onConflict: "external_id" });
-
-      if (error) {
-        errors.push({
-          game: dbGame.external_id,
-          message: error.message,
-          details: error.details ?? "",
-        });
-      } else {
-        if (isNew) inserted++;
-        else updated++;
-      }
+      if (error) errors.push({ game: dbGame.external_id, message: error.message, details: error.details ?? "" });
+      else updated++;
     }
 
     return NextResponse.json({
       success: true,
       inserted,
       updated,
+      unchanged,
       total: games.length,
       seasonName: activeSeason.name,
       errors,

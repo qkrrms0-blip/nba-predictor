@@ -297,7 +297,8 @@ export default function AdminPage() {
         const parts = [];
         if (json.inserted > 0) parts.push(`신규 ${json.inserted}경기`);
         if (json.updated > 0) parts.push(`업데이트 ${json.updated}경기`);
-        const resultMsg = parts.length > 0 ? parts.join(" · ") : "변경 없음";
+        if (json.unchanged > 0) parts.push(`변경없음 ${json.unchanged}경기`);
+        const resultMsg = parts.join(" · ") || "변경 없음";
         setEspnResult(`✅ ${resultMsg} (총 ${json.total}경기 확인)`);
         const today = format(new Date(), "yyyy-MM-dd");
         setEspnLastSync(today);
