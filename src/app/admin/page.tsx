@@ -437,20 +437,18 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* 날짜 범위 */}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div className="form-group" style={{ flex: 1 }}>
-                    <label className="form-label">시작일</label>
-                    <input type="date" className="text-input"
-                      value={espnStartDate}
-                      onChange={(e) => setEspnStartDate(e.target.value)} />
-                  </div>
-                  <div className="form-group" style={{ flex: 1 }}>
-                    <label className="form-label">종료일</label>
-                    <input type="date" className="text-input"
-                      value={espnEndDate}
-                      onChange={(e) => setEspnEndDate(e.target.value)} />
-                  </div>
+                {/* 날짜 범위 - 각각 전체 폭 (모바일 침범 방지) */}
+                <div className="form-group">
+                  <label className="form-label">시작일</label>
+                  <input type="date" className="text-input" style={{ width: "100%", boxSizing: "border-box" }}
+                    value={espnStartDate}
+                    onChange={(e) => setEspnStartDate(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">종료일</label>
+                  <input type="date" className="text-input" style={{ width: "100%", boxSizing: "border-box" }}
+                    value={espnEndDate}
+                    onChange={(e) => setEspnEndDate(e.target.value)} />
                 </div>
 
                 <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>
@@ -474,34 +472,28 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* 자동채점 */}
+              {/* 자동채점 - 버튼만 */}
               <div className="card" style={{ marginBottom: 12 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 14 }}>
-                  ⚡ 종료경기 자동채점
-                </div>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
-                  ESPN에서 경기 결과를 확인해 채점 대기 중인 경기를 자동으로 채점합니다.
-                </p>
                 <button className="btn-primary" style={{ width: "100%", background: "var(--accent2)" }}
                   onClick={gradeGamesAuto} disabled={gradeLoading}>
-                  {gradeLoading ? "채점 중..." : "자동채점 실행"}
+                  {gradeLoading ? "채점 중..." : "⚡ 자동채점 실행"}
                 </button>
               </div>
 
               {/* 경기 추가 폼 - 접기/펼치기 */}
               <div style={{
-                border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                border: "1px solid var(--border)", borderRadius: 10,
                 background: "var(--surface)", marginBottom: 12, overflow: "hidden",
               }}>
                 <div
                   onClick={() => setAddGameOpen((v) => !v)}
                   style={{
-                    fontWeight: 700, fontSize: 14, padding: "14px 16px",
+                    fontWeight: 700, fontSize: 14, padding: "10px 14px",
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     cursor: "pointer", userSelect: "none",
                     borderBottom: addGameOpen ? "1px solid var(--border)" : "none",
                   }}>
-                  <span>+ 경기 추가</span>
+                  <span>경기 추가</span>
                   <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
                     {addGameOpen ? "−" : "+"}
                   </span>
@@ -509,9 +501,9 @@ export default function AdminPage() {
 
                 {addGameOpen && (
                   <div style={{ padding: "14px 16px" }}>
-                    {/* 홈팀 / 원정팀 2열 */}
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <div className="form-group" style={{ flex: 1 }}>
+                    {/* 홈팀 / 원정팀 - 모바일에서 세로, PC에서 가로 */}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
                         <label className="form-label">홈팀</label>
                         <select className="filter-select" style={{ width: "100%" }}
                           value={newGame.home_team}
@@ -524,7 +516,7 @@ export default function AdminPage() {
                           </optgroup>
                         </select>
                       </div>
-                      <div className="form-group" style={{ flex: 1 }}>
+                      <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
                         <label className="form-label">원정팀</label>
                         <select className="filter-select" style={{ width: "100%" }}
                           value={newGame.away_team}
@@ -539,25 +531,23 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* 경기 시작시간 / 투표 마감시간 2열 */}
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <div className="form-group" style={{ flex: 1 }}>
-                        <label className="form-label">경기 시작시간</label>
-                        <input type="datetime-local" className="text-input"
-                          value={newGame.start_time}
-                          onChange={(e) => setNewGame({ ...newGame, start_time: e.target.value })} />
-                      </div>
-                      <div className="form-group" style={{ flex: 1 }}>
-                        <label className="form-label">투표 마감시간</label>
-                        <input type="datetime-local" className="text-input"
-                          value={newGame.vote_deadline}
-                          onChange={(e) => setNewGame({ ...newGame, vote_deadline: e.target.value })} />
-                      </div>
+                    {/* 시작시간 / 마감시간 - 각각 전체 폭 (날짜피커 침범 방지) */}
+                    <div className="form-group">
+                      <label className="form-label">경기 시작시간</label>
+                      <input type="datetime-local" className="text-input" style={{ width: "100%", boxSizing: "border-box" }}
+                        value={newGame.start_time}
+                        onChange={(e) => setNewGame({ ...newGame, start_time: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">투표 마감시간</label>
+                      <input type="datetime-local" className="text-input" style={{ width: "100%", boxSizing: "border-box" }}
+                        value={newGame.vote_deadline}
+                        onChange={(e) => setNewGame({ ...newGame, vote_deadline: e.target.value })} />
                     </div>
 
-                    {/* 라운드 / 시즌 2열 */}
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <div className="form-group" style={{ flex: 1 }}>
+                    {/* 라운드 / 시즌 - 모바일에서 세로, PC에서 가로 */}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
                         <label className="form-label">라운드</label>
                         <select className="filter-select" style={{ width: "100%" }}
                           value={newGame.round}
@@ -565,7 +555,7 @@ export default function AdminPage() {
                           {ROUNDS.map((r) => <option key={r} value={r}>{r} ({ROUND_POINTS[r]}점)</option>)}
                         </select>
                       </div>
-                      <div className="form-group" style={{ flex: 1 }}>
+                      <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
                         <label className="form-label">시즌</label>
                         <select className="filter-select" style={{ width: "100%" }}
                           value={newGame.season_id}
