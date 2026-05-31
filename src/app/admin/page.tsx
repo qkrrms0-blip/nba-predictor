@@ -143,6 +143,15 @@ export default function AdminPage() {
 
   // 채점 변경용
   const [regradeGameId, setRegradeGameId] = useState<number | null>(null);
+
+  // ESPN 연동
+  const [espnStartDate, setEspnStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [espnEndDate, setEspnEndDate] = useState(format(addDays(new Date(), 3), "yyyy-MM-dd"));
+  const [espnSeasonType, setEspnSeasonType] = useState<2 | 3>(3);
+  const [espnSeasonId, setEspnSeasonId] = useState(1);
+  const [espnLoading, setEspnLoading] = useState(false);
+  const [espnResult, setEspnResult] = useState<string>("");
+  const [gradeLoading, setGradeLoading] = useState(false);
   // 채점 완료 경기 섹션 접기/펼치기 (기본: 접힘)
   const [completedSectionOpen, setCompletedSectionOpen] = useState(false);
 
@@ -259,6 +268,54 @@ export default function AdminPage() {
     else { showToast("✅ 경기 추가 완료"); loadData(); }
   };
 
+  const syncESPN = async () => {
+    if (espnLoading) return;
+    setEspnLoading(true);
+    setEspnResult("");
+    try {
+      const res = await fetch("/api/games/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: espnStartDate,
+          endDate: espnEndDate,
+          seasonType: espnSeasonType,
+          seasonId: espnSeasonId,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setEspnResult(`✅ ${json.total}경기 중 ${json.synced}경기 등록 완료`);
+        loadData();
+      } else {
+        setEspnResult(`❌ 오류: ${json.error}`);
+      }
+    } catch (e) {
+      setEspnResult(`❌ 네트워크 오류`);
+    }
+    setEspnLoading(false);
+  };
+
+  const gradeGamesAuto = async () => {
+    if (gradeLoading) return;
+    setGradeLoading(true);
+    try {
+      const res = await fetch("/api/games/grade", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast(`✅ ${json.graded}경기 자동채점 완료`);
+        loadData();
+      } else {
+        showToast(`❌ 오류: ${json.error}`);
+      }
+    } catch {
+      showToast("❌ 네트워크 오류");
+    }
+    setGradeLoading(false);
+  };
+
   const deleteGame = async (gameId: number) => {
     if (!confirm("이 경기를 삭제하시겠습니까? 관련 투표도 모두 삭제됩니다.")) return;
     await supabase.from("votes").delete().eq("game_id", gameId);
@@ -333,6 +390,102 @@ export default function AdminPage() {
           {/* ── 경기 관리 ── */}
           {tab === "games" && (
             <>
+              {/* ESPN 경기 가져오기 */}
+              <div className="card" style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
+                  🏀 ESPN 경기 자동 등록
+                </div>
+
+                {/* 시즌 타입 */}
+                <div className="form-group">
+                  <label className="form-label">시즌 구분</label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => setEspnSeasonType(3)}
+                      style={{
+                        flex: 1, padding: "8px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                        cursor: "pointer", border: "none",
+                        background: espnSeasonType === 3 ? "var(--accent)" : "var(--surface2)",
+                        color: espnSeasonType === 3 ? "#fff" : "var(--text-muted)",
+                      }}>
+                      포스트시즌
+                    </button>
+                    <button
+                      onClick={() => setEspnSeasonType(2)}
+                      style={{
+                        flex: 1, padding: "8px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                        cursor: "pointer", border: "none",
+                        background: espnSeasonType === 2 ? "var(--accent)" : "var(--surface2)",
+                        color: espnSeasonType === 2 ? "#fff" : "var(--text-muted)",
+                      }}>
+                      정규시즌
+                    </button>
+                  </div>
+                </div>
+
+                {/* 시즌 선택 */}
+                <div className="form-group">
+                  <label className="form-label">시즌</label>
+                  <select className="filter-select" style={{ width: "100%" }}
+                    value={espnSeasonId}
+                    onChange={(e) => setEspnSeasonId(Number(e.target.value))}>
+                    {seasons.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 날짜 범위 */}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">시작일</label>
+                    <input type="date" className="text-input"
+                      value={espnStartDate}
+                      onChange={(e) => setEspnStartDate(e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">종료일</label>
+                    <input type="date" className="text-input"
+                      value={espnEndDate}
+                      onChange={(e) => setEspnEndDate(e.target.value)} />
+                  </div>
+                </div>
+
+                <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 10 }}>
+                  * 범위가 넓으면 시간이 걸릴 수 있어요. 월 단위로 나눠서 등록을 권장합니다.
+                </p>
+
+                <button className="btn-primary" style={{ width: "100%" }}
+                  onClick={syncESPN} disabled={espnLoading}>
+                  {espnLoading ? "가져오는 중..." : "ESPN에서 경기 가져오기"}
+                </button>
+
+                {espnResult && (
+                  <div style={{
+                    marginTop: 10, padding: "8px 12px", borderRadius: 8,
+                    background: espnResult.startsWith("✅") ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                    color: espnResult.startsWith("✅") ? "var(--green)" : "var(--red)",
+                    fontSize: 13, fontWeight: 600,
+                  }}>
+                    {espnResult}
+                  </div>
+                )}
+              </div>
+
+              {/* 자동채점 */}
+              <div className="card" style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 14 }}>
+                  ⚡ 종료경기 자동채점
+                </div>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>
+                  ESPN에서 경기 결과를 확인해 채점 대기 중인 경기를 자동으로 채점합니다.
+                </p>
+                <button className="btn-primary" style={{ width: "100%", background: "var(--accent2)" }}
+                  onClick={gradeGamesAuto} disabled={gradeLoading}>
+                  {gradeLoading ? "채점 중..." : "자동채점 실행"}
+                </button>
+              </div>
+
               {/* 경기 추가 폼 */}
               <div className="card">
                 <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>+ 경기 추가</div>
