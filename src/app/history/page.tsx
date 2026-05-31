@@ -20,13 +20,8 @@ interface GameResult {
   correctCount: number;
   myVotedTeam?: "home" | "away" | null;
   myIsCorrect?: boolean | null;
+  season_type?: string;
 }
-
-const PLAYOFF_MONTHS = [
-  { value: "04", label: "4월" },
-  { value: "05", label: "5월" },
-  { value: "06", label: "6월" },
-];
 
 export default function HistoryPage() {
   const supabase = createClient();
@@ -40,6 +35,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [expandedGame, setExpandedGame] = useState<number | null>(null);
   const [userId, setUserId] = useState<string>("");
+  const [seasonTypeFilter, setSeasonTypeFilter] = useState<"regular" | "post">("post");
 
   // 시즌 목록 초기 로드
   useEffect(() => {
@@ -56,6 +52,12 @@ export default function HistoryPage() {
       }
     };
     init();
+  }, []);
+
+  // 현재 월 기준 자동 seasonType 결정
+  useEffect(() => {
+    const month = new Date().getMonth() + 1; // 1~12
+    setSeasonTypeFilter(month >= 4 ? "post" : "regular");
   }, []);
 
   // 시즌 변경 시 전체 경기 로드
@@ -112,15 +114,20 @@ export default function HistoryPage() {
     setLoading(false);
   };
 
+  // seasonType 필터링된 경기
+  const seasonFilteredGames = allSeasonGames.filter(
+    (g) => !g.season_type || g.season_type === seasonTypeFilter
+  );
+
   // 월 선택 시 해당 월의 경기 있는 날짜 계산
   useEffect(() => {
     if (!filterMonth) {
       setDaysWithGames([]);
       setFilterDay(null);
-      setGameResults(allSeasonGames);
+      setGameResults(seasonFilteredGames);
       return;
     }
-    const monthGames = allSeasonGames.filter((g) => {
+    const monthGames = seasonFilteredGames.filter((g) => {
       return format(new Date(g.start_time), "MM") === filterMonth;
     });
     const days = Array.from(
@@ -129,15 +136,15 @@ export default function HistoryPage() {
     setDaysWithGames(days);
     setFilterDay(null);
     setGameResults(monthGames);
-  }, [filterMonth, allSeasonGames]);
+  }, [filterMonth, allSeasonGames, seasonTypeFilter]);
 
   // 날짜 선택 시 필터링
   useEffect(() => {
     if (!filterMonth) return;
     if (filterDay === null) {
-      setGameResults(allSeasonGames.filter((g) => format(new Date(g.start_time), "MM") === filterMonth));
+      setGameResults(seasonFilteredGames.filter((g) => format(new Date(g.start_time), "MM") === filterMonth));
     } else {
-      setGameResults(allSeasonGames.filter((g) => {
+      setGameResults(seasonFilteredGames.filter((g) => {
         const d = new Date(g.start_time);
         return format(d, "MM") === filterMonth && d.getDate() === Number(filterDay);
       }));
@@ -146,32 +153,53 @@ export default function HistoryPage() {
 
   return (
     <>
-      {/* 시즌 선택 */}
-      <div className="filter-row">
-        <select className="filter-select" value={selectedSeason ?? ""}
+      {/* 1행: 시즌 선택 + Regular/POST 탭 */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+        <select className="filter-select" style={{ flex: 1 }} value={selectedSeason ?? ""}
           onChange={(e) => setSelectedSeason(Number(e.target.value))}>
           {seasons.map((s) => (
             <option key={s.id} value={s.id}>{s.name}{s.is_active ? " 🔴" : ""}</option>
           ))}
         </select>
+        <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
+          {(["regular", "post"] as const).map((type) => (
+            <button key={type}
+              onClick={() => { setSeasonTypeFilter(type); setFilterMonth(null); setFilterDay(null); }}
+              style={{
+                padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
+                background: seasonTypeFilter === type ? "var(--accent)" : "var(--surface2)",
+                color: seasonTypeFilter === type ? "#fff" : "var(--text-muted)",
+              }}>
+              {type === "regular" ? "정규" : "POST"}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* 월 선택 (원형) */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 12, justifyContent: "center" }}>
-        {PLAYOFF_MONTHS.map((m) => (
-          <button key={m.value}
-            onClick={() => setFilterMonth(filterMonth === m.value ? null : m.value)}
-            style={{
-              width: 52, height: 52, borderRadius: "50%",
-              background: filterMonth === m.value ? "var(--accent)" : "var(--surface2)",
-              color: filterMonth === m.value ? "#fff" : "var(--text-muted)",
-              border: filterMonth === m.value ? "none" : "1px solid var(--border)",
-              fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "all 0.15s",
-            }}>
-            {m.label}
-          </button>
-        ))}
-      </div>
+      {/* 2행: 월 선택 (가로 스와이프) */}
+      {(() => {
+        const months = seasonTypeFilter === "regular"
+          ? ["10","11","12","01","02","03","04"]
+          : ["04","05","06"];
+        const labels: Record<string, string> = { "01":"1월","02":"2월","03":"3월","04":"4월","05":"5월","06":"6월","07":"7월","08":"8월","09":"9월","10":"10월","11":"11월","12":"12월" };
+        return (
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 10, scrollbarWidth: "none" }}>
+            {months.map((m) => (
+              <button key={m}
+                onClick={() => setFilterMonth(filterMonth === m ? null : m)}
+                style={{
+                  flexShrink: 0, padding: "5px 14px", borderRadius: 20,
+                  background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
+                  color: filterMonth === m ? "#fff" : "var(--text-muted)",
+                  border: filterMonth === m ? "none" : "1px solid var(--border)",
+                  fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "all 0.15s",
+                }}>
+                {labels[m]}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* 날짜 선택 (경기 있는 날만 원형) */}
       {filterMonth && daysWithGames.length > 0 && (

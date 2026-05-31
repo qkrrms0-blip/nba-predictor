@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const errors: { game: string; message: string; details: string }[] = [];
 
     for (const game of games) {
-      const dbGame = mapESPNGameToDBGame(game, seasonId || 1);
+      const dbGame = mapESPNGameToDBGame(game, seasonId || 1, seasonType);
       const { error } = await adminSupabase
         .from("games")
         .upsert(dbGame, { onConflict: "external_id" });
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       synced,
       total: games.length,
       errors,
-      sample: games[0] ? mapESPNGameToDBGame(games[0], seasonId || 1) : null,
+      sample: games[0] ? mapESPNGameToDBGame(games[0], seasonId || 1, seasonType) : null,
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });

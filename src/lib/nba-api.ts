@@ -81,7 +81,7 @@ export async function fetchGamesByDateRange(
   return allGames;
 }
 
-export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
+export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number, seasonType: 2 | 3 = 3) {
   const comp = game.competitions[0];
   const home = comp.competitors.find((c) => c.homeAway === "home")!;
   const away = comp.competitors.find((c) => c.homeAway === "away")!;
@@ -114,6 +114,7 @@ export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
     vote_deadline: voteDeadline.toISOString(),
     round,
     winner,
+    season_type: seasonType === 2 ? "regular" : "post",
     external_id: `espn_${game.id}`,
   };
 }
