@@ -249,8 +249,9 @@ export default function VotingPage() {
         </div>
       )}
 
-      {/* 날짜 탭 */}
-      <div className="date-tabs" style={{ padding: "6px 0 6px" }}>
+      {/* 날짜 탭 + 투표현황 한 줄 */}
+      <div style={{ display: "flex", alignItems: "center", padding: "6px 0" }}>
+      <div className="date-tabs" style={{ padding: 0, flex: 1 }}>
         {DATE_TABS.map((tab) => {
           const date = addDays(new Date(), tab.offset);
           const dateStr = format(date, "M/d (EEE)", { locale: ko });
@@ -266,25 +267,15 @@ export default function VotingPage() {
           );
         })}
       </div>
-
-      {/* 투표 현황 — 마감 전 경기 기준 */}
-      {totalVotableCount > 0 && (
-        <div style={{
-          display: "flex", justifyContent: "center", alignItems: "center",
-          gap: 5, margin: "6px 0 10px", fontSize: 12, color: "var(--text-muted)",
-        }}>
-          <span>투표 가능</span>
-          <span style={{ fontWeight: 700, color: myVoteCount === totalVotableCount ? "var(--green)" : "var(--text)" }}>
-            {myVoteCount}
-          </span>
-          <span>/</span>
-          <span style={{ fontWeight: 600, color: "var(--text)" }}>{totalVotableCount}</span>
-          <span>완료</span>
-          {myVoteCount === totalVotableCount && (
-            <span style={{ color: "var(--green)" }}>✓</span>
-          )}
-        </div>
-      )}
+        {totalVotableCount > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, color: "var(--text-muted)", flexShrink: 0, paddingLeft: 8 }}>
+            <span style={{ fontWeight: 700, color: myVoteCount === totalVotableCount ? "var(--green)" : "var(--text)" }}>{myVoteCount}</span>
+            <span>/</span>
+            <span style={{ fontWeight: 600, color: "var(--text)" }}>{totalVotableCount}</span>
+            {myVoteCount === totalVotableCount && <span style={{ color: "var(--green)" }}>✓</span>}
+          </div>
+        )}
+      </div>
 
       {loading ? (
         <div className="loading-spinner"><div className="spinner" /></div>
@@ -311,23 +302,21 @@ export default function VotingPage() {
                 {/* 왼쪽: 포스트시즌 라운드명 */}
                 <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {!isRegular && (
-                    <span style={{
-                      fontSize: 9, color: "var(--accent)", fontWeight: 700,
-                      textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all",
-                    }}>
-                      {game.round.replace(" ", "\n")}
-                      {pts ? `\n·${pts}pt` : ""}
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                      <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>
+                        {game.round.replace(" ", "\n")}
+                      </span>
+                      {pts && (
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                          {pts}pt
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
-                {/* 홈팀: 로고 | 원형버튼 (VS쪽에 버튼) */}
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                  <img
-                    src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
-                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                  />
+                {/* 홈팀: 버튼(바깥) | 로고(VS쪽) */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                   <button
                     className={`vote-circle-btn${game.myVote?.voted_team === "home" ? " selected-home" : ""}`}
                     onClick={() => !closed && handleVote(game.id, "home", game.season_id)}
@@ -335,6 +324,11 @@ export default function VotingPage() {
                   >
                     {game.myVote?.voted_team === "home" ? "✓" : "승"}
                   </button>
+                  <img
+                    src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
+                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
                 </div>
 
                 {/* 가운데 VS 메타블록: 시간 / VS / 마감 */}
