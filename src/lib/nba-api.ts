@@ -100,6 +100,10 @@ export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
   const headline = comp.notes?.[0]?.headline || "";
   const round = mapESPNHeadlineToRound(headline);
 
+  // 투표 마감: 경기 시작 1시간 전 (한국시간 기준으로 저장)
+  const startTime = new Date(comp.date);
+  const voteDeadline = new Date(startTime.getTime() - 60 * 60 * 1000);
+
   return {
     season_id: seasonId,
     home_team: home.team.displayName,
@@ -107,6 +111,7 @@ export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
     home_score: isCompleted ? homeScore : null,
     away_score: isCompleted ? awayScore : null,
     start_time: comp.date,
+    vote_deadline: voteDeadline.toISOString(),
     round,
     winner,
     external_id: `espn_${game.id}`,
