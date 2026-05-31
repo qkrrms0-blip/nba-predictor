@@ -153,46 +153,53 @@ export default function HistoryPage() {
 
   return (
     <>
-      {/* 1행: 시즌 선택 + Regular/POST 탭 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
-        <select className="filter-select" style={{ flex: 1 }} value={selectedSeason ?? ""}
-          onChange={(e) => setSelectedSeason(Number(e.target.value))}>
-          {seasons.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}{s.is_active ? " 🔴" : ""}</option>
-          ))}
-        </select>
-        <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
-          {(["regular", "post"] as const).map((type) => (
-            <button key={type}
-              onClick={() => { setSeasonTypeFilter(type); setFilterMonth(null); setFilterDay(null); }}
-              style={{
-                padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
-                background: seasonTypeFilter === type ? "var(--accent)" : "var(--surface2)",
-                color: seasonTypeFilter === type ? "#fff" : "var(--text-muted)",
-              }}>
-              {type === "regular" ? "정규" : "POST"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 2행: 월 선택 (가로 스와이프) */}
+      {/* 한 줄: 시즌 + 정규/POST + 월 스와이프 */}
       {(() => {
         const months = seasonTypeFilter === "regular"
           ? ["10","11","12","01","02","03","04"]
           : ["04","05","06"];
-        const labels: Record<string, string> = { "01":"1월","02":"2월","03":"3월","04":"4월","05":"5월","06":"6월","07":"7월","08":"8월","09":"9월","10":"10월","11":"11월","12":"12월" };
+        const labels: Record<string, string> = { "01":"1월","02":"2월","03":"3월","04":"4월","05":"5월","06":"6월","10":"10월","11":"11월","12":"12월" };
         return (
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 10, scrollbarWidth: "none" }}>
+          <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center", overflowX: "auto", scrollbarWidth: "none" }}>
+            {/* 시즌 선택 - 고정 */}
+            <select className="filter-select" style={{ flexShrink: 0, maxWidth: 110, fontSize: 12, padding: "5px 6px" }}
+              value={selectedSeason ?? ""}
+              onChange={(e) => setSelectedSeason(Number(e.target.value))}>
+              {seasons.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.is_active ? "🟢" : "🔴"} {s.name.replace(" Season", "")}
+                </option>
+              ))}
+            </select>
+
+            {/* 정규/POST 탭 - 고정 */}
+            <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
+              {(["regular", "post"] as const).map((type) => (
+                <button key={type}
+                  onClick={() => { setSeasonTypeFilter(type); setFilterMonth(null); setFilterDay(null); }}
+                  style={{
+                    padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
+                    background: seasonTypeFilter === type ? "var(--accent)" : "var(--surface2)",
+                    color: seasonTypeFilter === type ? "#fff" : "var(--text-muted)",
+                  }}>
+                  {type === "regular" ? "정규" : "POST"}
+                </button>
+              ))}
+            </div>
+
+            {/* 구분선 */}
+            <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
+
+            {/* 월 스와이프 영역 */}
             {months.map((m) => (
               <button key={m}
                 onClick={() => setFilterMonth(filterMonth === m ? null : m)}
                 style={{
-                  flexShrink: 0, padding: "5px 14px", borderRadius: 20,
+                  flexShrink: 0, padding: "5px 10px", borderRadius: 20,
                   background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
                   color: filterMonth === m ? "#fff" : "var(--text-muted)",
                   border: filterMonth === m ? "none" : "1px solid var(--border)",
-                  fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "all 0.15s",
+                  fontWeight: 600, fontSize: 12, cursor: "pointer", transition: "all 0.15s",
                 }}>
                 {labels[m]}
               </button>
