@@ -281,12 +281,12 @@ export default function HistoryPage() {
         {/* 구분선 */}
         <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
 
-        {/* ── 월 캐러셀 ── */}
+        {/* ── 월 캐러셀 외부 wrapper: overflow:hidden으로 레이아웃 이탈 차단 ── */}
+        <div style={{ flex: 1, minWidth: 0, overflow: "hidden", position: "relative" }}>
         <div
           ref={monthScrollRef}
           onScroll={onMonthScroll}
           style={{
-            flex: 1,
             display: "flex",
             alignItems: "center",
             gap: GAP,
@@ -294,18 +294,17 @@ export default function HistoryPage() {
             scrollbarWidth: "none",
             scrollSnapType: "x mandatory",
             WebkitOverflowScrolling: "touch",
-            // 양쪽에 padding 줘서 첫·마지막 아이템도 중앙에 올 수 있게
-            paddingLeft: "calc(50% - 26px)",
-            paddingRight: "calc(50% - 26px)",
           }}
         >
+          {/* 앞 스페이서: 첫 아이템도 중앙에 올 수 있게 */}
+          <div style={{ flexShrink: 0, scrollSnapAlign: "none", width: "calc(50% - 26px)", minWidth: "calc(50% - 26px)" }} />
+
           {months.map((m, idx) => {
             const dist = Math.abs(idx - centeredMonthIndex);
             const isCenter = dist === 0;
             const isAdjacent = dist === 1;
             const isActive = filterMonth === m;
 
-            // 크기: 중앙 > 인접 > 나머지
             const scale = isCenter ? 1 : isAdjacent ? 0.85 : 0.7;
             const opacity = isCenter ? 1 : isAdjacent ? 0.7 : 0.45;
             const fontSize = isCenter ? 13 : 12;
@@ -338,7 +337,11 @@ export default function HistoryPage() {
               </button>
             );
           })}
+
+          {/* 뒤 스페이서: 마지막 아이템도 중앙에 올 수 있게 */}
+          <div style={{ flexShrink: 0, scrollSnapAlign: "none", width: "calc(50% - 26px)", minWidth: "calc(50% - 26px)" }} />
         </div>
+        </div>{/* overflow:hidden wrapper 닫기 */}
 
         {/* 달력 버튼 */}
         <button
