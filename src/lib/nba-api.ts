@@ -64,42 +64,49 @@ function determineWinner(game: BDLGame): "home" | "away" | null {
   return null;
 }
 
-// NBA 팀 약어 맵 (영문명 → ESPN 약어)
-const TEAM_ABBR_MAP: Record<string, string> = {
-  "Atlanta Hawks": "ATL",
-  "Boston Celtics": "BOS",
-  "Brooklyn Nets": "BKN",
-  "Charlotte Hornets": "CHA",
-  "Chicago Bulls": "CHI",
-  "Cleveland Cavaliers": "CLE",
-  "Dallas Mavericks": "DAL",
-  "Denver Nuggets": "DEN",
-  "Detroit Pistons": "DET",
-  "Golden State Warriors": "GSW",
-  "Houston Rockets": "HOU",
-  "Indiana Pacers": "IND",
-  "LA Clippers": "LAC",
-  "Los Angeles Lakers": "LAL",
-  "Memphis Grizzlies": "MEM",
-  "Miami Heat": "MIA",
-  "Milwaukee Bucks": "MIL",
-  "Minnesota Timberwolves": "MIN",
-  "New Orleans Pelicans": "NOP",
-  "New York Knicks": "NYK",
-  "Oklahoma City Thunder": "OKC",
-  "Orlando Magic": "ORL",
-  "Philadelphia 76ers": "PHI",
-  "Phoenix Suns": "PHX",
-  "Portland Trail Blazers": "POR",
-  "Sacramento Kings": "SAC",
-  "San Antonio Spurs": "SAS",
-  "Toronto Raptors": "TOR",
-  "Utah Jazz": "UTA",
-  "Washington Wizards": "WAS",
+// ESPN CDN 실제 약어 맵 (팀 전체명 → ESPN CDN slug)
+// ESPN CDN URL 형식: https://a.espncdn.com/i/teamlogos/nba/500/{slug}.png
+const TEAM_ESPN_SLUG: Record<string, string> = {
+  "Atlanta Hawks": "atl",
+  "Boston Celtics": "bos",
+  "Brooklyn Nets": "bkn",
+  "Charlotte Hornets": "cha",
+  "Chicago Bulls": "chi",
+  "Cleveland Cavaliers": "cle",
+  "Dallas Mavericks": "dal",
+  "Denver Nuggets": "den",
+  "Detroit Pistons": "det",
+  "Golden State Warriors": "gs",       // 'gsw' 아님 — ESPN은 'gs'
+  "Houston Rockets": "hou",
+  "Indiana Pacers": "ind",
+  "LA Clippers": "lac",
+  "Los Angeles Clippers": "lac",
+  "Los Angeles Lakers": "lal",
+  "Memphis Grizzlies": "mem",
+  "Miami Heat": "mia",
+  "Milwaukee Bucks": "mil",
+  "Minnesota Timberwolves": "min",
+  "New Orleans Pelicans": "no",        // 'nop' 아님 — ESPN은 'no'
+  "New York Knicks": "ny",             // ESPN은 'ny'
+  "Oklahoma City Thunder": "okc",
+  "Orlando Magic": "orl",
+  "Philadelphia 76ers": "phi",
+  "Phoenix Suns": "phx",
+  "Portland Trail Blazers": "por",
+  "Sacramento Kings": "sac",
+  "San Antonio Spurs": "sa",           // ESPN은 'sa'
+  "Toronto Raptors": "tor",
+  "Utah Jazz": "utah",
+  "Washington Wizards": "wsh",         // ESPN은 'wsh'
 };
 
 // ESPN CDN 로고 URL
 export function getTeamLogoUrl(teamName: string): string {
-  const abbr = TEAM_ABBR_MAP[teamName] || "NBA";
-  return `https://a.espncdn.com/i/teamlogos/nba/500/${abbr.toLowerCase()}.png`;
+  const slug = TEAM_ESPN_SLUG[teamName];
+  if (!slug) {
+    // 폴백: 팀명에서 마지막 단어를 소문자로 변환해 시도
+    const fallback = teamName.split(" ").pop()?.toLowerCase() || "nba";
+    return `https://a.espncdn.com/i/teamlogos/nba/500/${fallback}.png`;
+  }
+  return `https://a.espncdn.com/i/teamlogos/nba/500/${slug}.png`;
 }

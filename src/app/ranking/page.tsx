@@ -40,13 +40,11 @@ export default function RankingPage() {
   const loadRanking = async (seasonId: number) => {
     setLoading(true);
 
-    // 승인된 모든 유저 가져오기
     const { data: allUsers } = await supabase
       .from("users")
       .select("id, name, email, bonus_points")
       .eq("approved", true);
 
-    // 해당 시즌 투표 집계
     const { data: votes } = await supabase
       .from("votes")
       .select("user_id, is_correct, points")
@@ -58,7 +56,6 @@ export default function RankingPage() {
       return;
     }
 
-    // 유저별 집계
     const rankMap: Record<string, RankingEntry> = {};
     allUsers.forEach((u: { id: string; name: string; email: string; bonus_points: number | null }) => {
       rankMap[u.id] = {
@@ -83,7 +80,6 @@ export default function RankingPage() {
       }
     });
 
-    // 정확도 계산 + 정렬
     const result = Object.values(rankMap).map((entry) => ({
       ...entry,
       total_points: Math.round(entry.total_points * 10) / 10,
@@ -96,14 +92,11 @@ export default function RankingPage() {
     setLoading(false);
   };
 
-  // 동점자 고려한 순위 계산
   const getRank = (idx: number): number => {
     if (idx === 0) return 1;
     const prev = rankings[idx - 1];
     const curr = rankings[idx];
-    if (prev.total_points === curr.total_points) {
-      return getRank(idx - 1);
-    }
+    if (prev.total_points === curr.total_points) return getRank(idx - 1);
     return idx + 1;
   };
 
@@ -123,9 +116,7 @@ export default function RankingPage() {
 
   return (
     <>
-      
-
-      <div className="filter-row">
+      <div className="filter-row" style={{ marginBottom: 10 }}>
         <select
           className="filter-select"
           value={selectedSeason ?? ""}
@@ -166,7 +157,7 @@ export default function RankingPage() {
                   )}
                 </div>
                 <div className="rank-sub">
-                  {entry.correct_votes}/{entry.total_votes} 적중 · 정확도 {entry.accuracy_pct}%
+                  {entry.correct_votes}/{entry.total_votes} 적중 · {entry.accuracy_pct}%
                 </div>
               </div>
               <div className="rank-points">{entry.total_points}</div>

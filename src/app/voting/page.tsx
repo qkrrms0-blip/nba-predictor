@@ -15,6 +15,13 @@ const DATE_TABS = [
   { label: "+3일", offset: 3 },
 ];
 
+// 한국 시간 기준 오후 3시(15:00) 이후면 내일(offset=1)을 기본값으로
+function getDefaultDateOffset(): number {
+  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const kstHour = nowKST.getUTCHours(); // KST 시각 = UTC+9
+  return kstHour >= 15 ? 1 : 0;
+}
+
 interface GameWithVotes extends Game {
   vote_deadline?: string;
   myVote?: Vote;
@@ -30,7 +37,7 @@ interface TopRanker {
 
 export default function VotingPage() {
   const supabase = createClient();
-  const [dateOffset, setDateOffset] = useState(0);
+  const [dateOffset, setDateOffset] = useState<number>(getDefaultDateOffset);
   const [games, setGames] = useState<GameWithVotes[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>("");
@@ -84,7 +91,6 @@ export default function VotingPage() {
       .map((e) => ({ ...e, total_points: Math.round(e.total_points * 10) / 10 }))
       .sort((a, b) => b.total_points - a.total_points);
 
-    // 동점자 그룹핑, 최대 3위까지
     const groups: TopRanker[] = [];
     let i = 0;
     let currentRank = 1;
@@ -140,7 +146,12 @@ export default function VotingPage() {
     const enriched: GameWithVotes[] = gamesData.map((game: GameWithVotes) => {
       const myVote = myVotes?.find((v: Vote) => v.game_id === game.id);
       const stats = voteStats[game.id];
-      return { ...game, myVote, homeVotes: stats?.home || 0, awayVotes: stats?.away || 0, totalVotes: (stats?.home || 0) + (stats?.away || 0) };
+      return {
+        ...game, myVote,
+        homeVotes: stats?.home || 0,
+        awayVotes: stats?.away || 0,
+        totalVotes: (stats?.home || 0) + (stats?.away || 0),
+      };
     });
 
     setGames(enriched); setLoading(false);
@@ -172,29 +183,22 @@ export default function VotingPage() {
     return deadline <= new Date();
   };
 
-  // 이미지처럼 가로 3칸 레이아웃
   const rankIcon = (rank: number) => {
     if (rank === 1) return "👑";
     if (rank === 2) return "🥈";
     return "🥉";
   };
 
-  const rankIconColor = (rank: number) => {
-    if (rank === 1) return "#FFD700";
-    if (rank === 2) return "#C0C0C0";
-    return "#CD7F32";
-  };
-
   return (
     <>
-      {/* 시즌 랭킹 - 이미지처럼 가로 3칸 */}
+      {/* 시즌 랭킹 Top 3 */}
       {topRankers.length > 0 && (
         <div style={{
           background: "var(--surface)",
           border: "1px solid var(--border)",
           borderRadius: 14,
-          padding: "14px 10px 10px",
-          marginBottom: 14,
+          padding: "10px 10px 8px",
+          marginBottom: 6,
           display: "flex",
           justifyContent: "center",
           gap: 0,
@@ -205,15 +209,14 @@ export default function VotingPage() {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 4,
-              borderRight: group.rank < topRankers[topRankers.length - 1].rank ? "1px solid var(--border)" : "none",
+              gap: 3,
+              borderRight: group.rank < topRankers[topRankers.length - 1].rank
+                ? "1px solid var(--border)" : "none",
               padding: "0 8px",
             }}>
-              {/* 아이콘 */}
-              <span style={{ fontSize: group.rank === 1 ? 26 : 22, lineHeight: 1 }}>
+              <span style={{ fontSize: group.rank === 1 ? 22 : 18, lineHeight: 1 }}>
                 {rankIcon(group.rank)}
               </span>
-              {/* 이름들 (동점자 여러명) */}
               {group.entries.map((entry) => (
                 <span key={entry.id} style={{
                   fontSize: 13,
@@ -234,7 +237,7 @@ export default function VotingPage() {
       )}
 
       {/* 날짜 탭 */}
-      <div className="date-tabs">
+      <div className="date-tabs" style={{ padding: "6px 0 6px" }}>
         {DATE_TABS.map((tab) => {
           const date = addDays(new Date(), tab.offset);
           const dateStr = format(date, "M/d (EEE)", { locale: ko });
@@ -266,64 +269,103 @@ export default function VotingPage() {
           const totalVotes = game.totalVotes || 0;
           const homePct = totalVotes > 0 ? Math.round((game.homeVotes || 0) / totalVotes * 100) : 50;
           const awayPct = 100 - homePct;
+          // 포스트시즌 경기만 round 표시 (round가 null이 아닌 경우)
+          const showRound = !!game.round;
+          const homeLogo = getTeamLogoUrl(game.home_team);
+          const awayLogo = getTeamLogoUrl(game.away_team);
 
           return (
-            <div key={game.id} className="game-card">
-              <div className="game-meta">
-                <span className="round-badge">{game.round} · {pts}점</span>
+            <div key={game.id} className="game-card-compact">
+              {/* 상단: 라운드(포스트시즌만) + 경기시작시간 */}
+              <div className="game-meta-compact">
+                {showRound
+                  ? <span className="round-badge">{game.round} · {pts}점</span>
+                  : <span />
+                }
                 <span className="game-time">{format(new Date(game.start_time), "HH:mm")}</span>
               </div>
-              {game.vote_deadline && (
-                <div style={{ fontSize: 11, color: closed ? "#ef4444" : "var(--text-muted)", marginBottom: 8 }}>
-                  {closed ? "⛔ 투표 마감됨" : `⏰ 마감: ${format(new Date(game.vote_deadline), "M/d HH:mm")}`}
+
+              {/* 팀 행: [홈로고] [홈승버튼]  VS  [원정승버튼] [원정로고] */}
+              <div className="teams-compact">
+                {/* 홈팀: [버튼] [로고] */}
+                <div className="team-side home-side">
+                  {!closed ? (
+                    <button
+                      className={`vote-btn-inline ${game.myVote?.voted_team === "home" ? "selected-home" : ""}`}
+                      onClick={() => handleVote(game.id, "home", game.season_id)}
+                    >
+                      {game.home_team.split(" ").pop()} 승{game.myVote?.voted_team === "home" ? " ✓" : ""}
+                    </button>
+                  ) : (
+                    <span className="team-name-sm">{game.home_team.split(" ").pop()}</span>
+                  )}
+                  <img
+                    src={homeLogo}
+                    alt={game.home_team}
+                    className="team-logo-sm"
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
                 </div>
-              )}
-              <div className="teams-row">
-                <div className="team-block">
-                  <img src={getTeamLogoUrl(game.home_team)} alt={game.home_team} className="team-logo"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                  <span className="team-name">{game.home_team}</span>
-                </div>
-                <div className="vs-block">
+
+                {/* VS / 스코어 */}
+                <div className="vs-center">
                   {game.home_score !== null && game.away_score !== null
                     ? <span className="score-display">{game.home_score} - {game.away_score}</span>
-                    : <span className="vs-text">VS</span>}
+                    : <span className="vs-text">VS</span>
+                  }
                 </div>
-                <div className="team-block">
-                  <img src={getTeamLogoUrl(game.away_team)} alt={game.away_team} className="team-logo"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                  <span className="team-name">{game.away_team}</span>
+
+                {/* 원정팀: [로고] [버튼] */}
+                <div className="team-side away-side">
+                  <img
+                    src={awayLogo}
+                    alt={game.away_team}
+                    className="team-logo-sm"
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
+                  {!closed ? (
+                    <button
+                      className={`vote-btn-inline ${game.myVote?.voted_team === "away" ? "selected-away" : ""}`}
+                      onClick={() => handleVote(game.id, "away", game.season_id)}
+                    >
+                      {game.away_team.split(" ").pop()} 승{game.myVote?.voted_team === "away" ? " ✓" : ""}
+                    </button>
+                  ) : (
+                    <span className="team-name-sm">{game.away_team.split(" ").pop()}</span>
+                  )}
                 </div>
               </div>
-              {!closed && (
-                <div className="vote-buttons">
-                  <button className={`vote-btn ${game.myVote?.voted_team === "home" ? "selected-home" : ""}`}
-                    onClick={() => handleVote(game.id, "home", game.season_id)}>
-                    {game.home_team.split(" ").pop()} 승 {game.myVote?.voted_team === "home" ? "✓" : ""}
-                  </button>
-                  <button className={`vote-btn ${game.myVote?.voted_team === "away" ? "selected-away" : ""}`}
-                    onClick={() => handleVote(game.id, "away", game.season_id)}>
-                    {game.away_team.split(" ").pop()} 승 {game.myVote?.voted_team === "away" ? "✓" : ""}
-                  </button>
+
+              {/* 하단: 마감시간 (빨간색) */}
+              {game.vote_deadline && (
+                <div className="deadline-row">
+                  {closed
+                    ? "⛔ 투표 마감됨"
+                    : `⏰ 마감: ${format(new Date(game.vote_deadline), "M/d HH:mm")}`
+                  }
                 </div>
               )}
+
+              {/* 마감 후: 내 선택 + 투표 통계 */}
               {closed && (
                 <>
                   {game.myVote && (
-                    <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-muted)", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center", marginTop: 6 }}>
                       내 선택: <strong style={{ color: "var(--text)" }}>
                         {game.myVote.voted_team === "home" ? game.home_team : game.away_team}
                       </strong>
                     </div>
                   )}
                   {totalVotes > 0 && (
-                    <div className="vote-stats">
+                    <div className="vote-stats" style={{ marginTop: 6 }}>
                       <span className="vote-pct">{homePct}%</span>
-                      <div className="vote-bar"><div className="vote-bar-fill" style={{ width: `${homePct}%` }} /></div>
+                      <div className="vote-bar">
+                        <div className="vote-bar-fill" style={{ width: `${homePct}%` }} />
+                      </div>
                       <span className="vote-pct">{awayPct}%</span>
                     </div>
                   )}
-                  <div style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
+                  <div style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
                     총 {totalVotes}표
                   </div>
                 </>

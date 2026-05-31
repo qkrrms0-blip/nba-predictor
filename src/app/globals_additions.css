@@ -1,0 +1,141 @@
+/* ================================================
+   추가/수정 CSS — globals.css 하단에 붙여넣기
+   ================================================ */
+
+/* 랭킹 카드 위아래 여백 축소 */
+.rank-card {
+  padding: 10px 14px;  /* 기존 14px 16px → 축소 */
+  margin-bottom: 6px;  /* 기존 8px → 축소 */
+}
+
+/* 투표 탭 — 컴팩트 경기 카드 */
+.game-card-compact {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;      /* 기존 20px 16px → 대폭 축소 */
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+}
+
+.game-card-compact:hover {
+  border-color: var(--border-bright);
+}
+
+/* 상단 메타 (라운드 + 시간) */
+.game-meta-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  min-height: 20px;
+}
+
+/* 팀 + 버튼 행 */
+.teams-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 홈/원정 팀 사이드 */
+.team-side {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-side {
+  justify-content: flex-end;   /* 버튼+로고를 VS 쪽으로 붙임 */
+  flex-direction: row-reverse; /* 순서: 버튼→로고 (왼→오) */
+}
+
+.away-side {
+  justify-content: flex-start; /* 로고+버튼을 VS 쪽에서 시작 */
+}
+
+/* 작은 팀 로고 */
+.team-logo-sm {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
+}
+
+/* 인라인 승 버튼 */
+.vote-btn-inline {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-bright);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.vote-btn-inline:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.vote-btn-inline.selected-home {
+  border-color: var(--accent2);
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent2);
+}
+
+.vote-btn-inline.selected-away {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+/* 마감 후 팀명 텍스트 */
+.team-name-sm {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* VS 가운데 영역 */
+.vs-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+}
+
+.vs-center .vs-text {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.vs-center .score-display {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+
+/* 마감 시간 행 — 빨간색 */
+.deadline-row {
+  font-size: 11px;
+  color: #ef4444;
+  margin-top: 5px;
+  text-align: center;
+}
+
+/* 날짜 탭 여백 축소 */
+.date-tabs {
+  padding: 6px 0 6px;  /* 기존 16px 0 8px → 축소 */
+}

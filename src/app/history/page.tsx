@@ -221,16 +221,18 @@ export default function HistoryPage() {
                   🎯 적중자 {game.correctCount}명 {expandedGame === game.id ? "▲" : "▼"}
                 </button>
                 {expandedGame === game.id && (
-                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{
+                    marginTop: 8,
+                    padding: "6px 10px",
+                    background: "rgba(34,197,94,0.08)",
+                    borderRadius: 6,
+                    fontSize: 13,
+                    lineHeight: 1.8,
+                  }}>
                     {game.correctVoters.map((voter, i) => (
-                      <div key={i} style={{
-                        display: "flex", justifyContent: "space-between",
-                        padding: "6px 10px", background: "rgba(34,197,94,0.08)",
-                        borderRadius: 6, fontSize: 13
-                      }}>
-                        <span>✓ {voter.name}</span>
-                        <span style={{ color: "var(--green)", fontWeight: 600 }}>+{voter.points}pt</span>
-                      </div>
+                      <span key={i}>
+                        {voter.name}{i < game.correctVoters.length - 1 ? "\u00A0 " : ""}
+                      </span>
                     ))}
                   </div>
                 )}
