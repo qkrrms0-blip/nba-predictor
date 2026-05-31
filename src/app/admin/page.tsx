@@ -146,7 +146,7 @@ export default function AdminPage() {
 
   // ESPN 연동
   const [espnStartDate, setEspnStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [espnEndDate, setEspnEndDate] = useState(format(addDays(new Date(), 3), "yyyy-MM-dd"));
+  const [espnEndDate, setEspnEndDate] = useState(format(addDays(new Date(), 30), "yyyy-MM-dd"));
   const [espnSeasonType, setEspnSeasonType] = useState<2 | 3>(3);
   const [espnSeasonId, setEspnSeasonId] = useState(1);
   const [espnLoading, setEspnLoading] = useState(false);
@@ -154,6 +154,8 @@ export default function AdminPage() {
   const [gradeLoading, setGradeLoading] = useState(false);
   // 채점 완료 경기 섹션 접기/펼치기 (기본: 접힘)
   const [completedSectionOpen, setCompletedSectionOpen] = useState(false);
+  // 경기 추가 폼 접기/펼치기 (기본: 접힘)
+  const [addGameOpen, setAddGameOpen] = useState(false);
 
   // 경기 목록 필터 - 월 선택 + 날짜 선택
   const currentYear = new Date().getFullYear();
@@ -486,50 +488,98 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* 경기 추가 폼 */}
-              <div className="card">
-                <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>+ 경기 추가</div>
-                <TeamSelect
-                  label="홈팀"
-                  value={newGame.home_team}
-                  onChange={(v) => setNewGame({ ...newGame, home_team: v })}
-                />
-                <TeamSelect
-                  label="원정팀"
-                  value={newGame.away_team}
-                  onChange={(v) => setNewGame({ ...newGame, away_team: v })}
-                />
-                <div className="form-group">
-                  <label className="form-label">경기 시작시간 (한국시간 기본: 내일 오전 8시)</label>
-                  <input type="datetime-local" className="text-input"
-                    value={newGame.start_time}
-                    onChange={(e) => setNewGame({ ...newGame, start_time: e.target.value })} />
+              {/* 경기 추가 폼 - 접기/펼치기 */}
+              <div style={{
+                border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                background: "var(--surface)", marginBottom: 12, overflow: "hidden",
+              }}>
+                <div
+                  onClick={() => setAddGameOpen((v) => !v)}
+                  style={{
+                    fontWeight: 700, fontSize: 14, padding: "14px 16px",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    cursor: "pointer", userSelect: "none",
+                    borderBottom: addGameOpen ? "1px solid var(--border)" : "none",
+                  }}>
+                  <span>+ 경기 추가</span>
+                  <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
+                    {addGameOpen ? "−" : "+"}
+                  </span>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">투표 마감시간 (기본: 내일 오전 8시)</label>
-                  <input type="datetime-local" className="text-input"
-                    value={newGame.vote_deadline}
-                    onChange={(e) => setNewGame({ ...newGame, vote_deadline: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">라운드</label>
-                  <select className="filter-select" style={{ width: "100%" }}
-                    value={newGame.round}
-                    onChange={(e) => setNewGame({ ...newGame, round: e.target.value as Round })}>
-                    {ROUNDS.map((r) => <option key={r} value={r}>{r} ({ROUND_POINTS[r]}점)</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">시즌</label>
-                  <select className="filter-select" style={{ width: "100%" }}
-                    value={newGame.season_id}
-                    onChange={(e) => setNewGame({ ...newGame, season_id: Number(e.target.value) })}>
-                    {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
-                <button className="btn-primary" style={{ width: "100%" }} onClick={addGame}>
-                  경기 추가
-                </button>
+
+                {addGameOpen && (
+                  <div style={{ padding: "14px 16px" }}>
+                    {/* 홈팀 / 원정팀 2열 */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">홈팀</label>
+                        <select className="filter-select" style={{ width: "100%" }}
+                          value={newGame.home_team}
+                          onChange={(e) => setNewGame({ ...newGame, home_team: e.target.value })}>
+                          <optgroup label="── 동부 ──">
+                            {EAST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
+                          </optgroup>
+                          <optgroup label="── 서부 ──">
+                            {WEST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
+                          </optgroup>
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">원정팀</label>
+                        <select className="filter-select" style={{ width: "100%" }}
+                          value={newGame.away_team}
+                          onChange={(e) => setNewGame({ ...newGame, away_team: e.target.value })}>
+                          <optgroup label="── 동부 ──">
+                            {EAST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
+                          </optgroup>
+                          <optgroup label="── 서부 ──">
+                            {WEST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
+                          </optgroup>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* 경기 시작시간 / 투표 마감시간 2열 */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">경기 시작시간</label>
+                        <input type="datetime-local" className="text-input"
+                          value={newGame.start_time}
+                          onChange={(e) => setNewGame({ ...newGame, start_time: e.target.value })} />
+                      </div>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">투표 마감시간</label>
+                        <input type="datetime-local" className="text-input"
+                          value={newGame.vote_deadline}
+                          onChange={(e) => setNewGame({ ...newGame, vote_deadline: e.target.value })} />
+                      </div>
+                    </div>
+
+                    {/* 라운드 / 시즌 2열 */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">라운드</label>
+                        <select className="filter-select" style={{ width: "100%" }}
+                          value={newGame.round}
+                          onChange={(e) => setNewGame({ ...newGame, round: e.target.value as Round })}>
+                          {ROUNDS.map((r) => <option key={r} value={r}>{r} ({ROUND_POINTS[r]}점)</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">시즌</label>
+                        <select className="filter-select" style={{ width: "100%" }}
+                          value={newGame.season_id}
+                          onChange={(e) => setNewGame({ ...newGame, season_id: Number(e.target.value) })}>
+                          {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button className="btn-primary" style={{ width: "100%" }} onClick={addGame}>
+                      경기 추가
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* 채점 대기 경기 */}
