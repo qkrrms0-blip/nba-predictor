@@ -227,43 +227,47 @@ export default function HistoryPage() {
               marginBottom: 8,
               transition: "border-color 0.2s",
             }}>
-              {/* 1행: 라운드 + 완료뱃지 */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                {game.round
-                  ? <span className="round-badge">{game.round}</span>
-                  : <span />}
-                <span className="badge badge-correct">완료</span>
-              </div>
+              {/* 메인 행: 왼쪽(라운드+시간) + 오른쪽(팀+승리+완료) */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
 
-              {/* 2행: 홈로고 팀명  VS  팀명 원정로고  |  승리:팀명 */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-                {/* 홈팀 */}
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
-                    style={{ width: 26, height: 26, objectFit: "contain" }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{homeAbbr}</span>
+                {/* 왼쪽: 라운드 + 날짜시간 세로 */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, minWidth: 70 }}>
+                  {game.round && (
+                    <span className="round-badge" style={{ fontSize: 10, padding: "2px 6px" }}>{game.round}</span>
+                  )}
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                    {format(new Date(game.start_time), "M/d HH:mm")}
+                  </span>
                 </div>
 
-                <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--text-muted)", margin: "0 6px" }}>VS</span>
+                {/* 오른쪽: 팀행 + 승리 + 완료뱃지 */}
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  {/* 홈팀 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
+                      style={{ width: 24, height: 24, objectFit: "contain" }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{homeAbbr}</span>
+                  </div>
 
-                {/* 원정팀 */}
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{awayAbbr}</span>
-                  <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
-                    style={{ width: 26, height: 26, objectFit: "contain" }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: 13, color: "var(--text-muted)" }}>VS</span>
+
+                  {/* 원정팀 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{awayAbbr}</span>
+                    <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
+                      style={{ width: 24, height: 24, objectFit: "contain" }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                  </div>
+
+                  {/* 승리팀 */}
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                    승리: <strong style={{ color: "var(--text)" }}>{winnerAbbr}</strong>
+                  </span>
+
+                  {/* 완료뱃지 우측 끝 */}
+                  <span className="badge badge-correct" style={{ marginLeft: "auto", flexShrink: 0 }}>완료</span>
                 </div>
-
-                {/* 승리팀 */}
-                <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 8, whiteSpace: "nowrap" }}>
-                  승리: <strong style={{ color: "var(--text)" }}>{winnerAbbr}</strong>
-                </span>
-              </div>
-
-              {/* 3행: 날짜시간 */}
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
-                {format(new Date(game.start_time), "M/d HH:mm")}
               </div>
 
               {/* 적중자 */}
