@@ -183,7 +183,10 @@ export default function AdminPage() {
       const { data: seasonData } = await supabase.from("seasons").select("*").order("id");
       setSeasons(seasonData || []);
       const active = (seasonData || []).find((s: Season) => s.is_active);
-      if (active) setNewGame((g) => ({ ...g, season_id: active.id }));
+      if (active) {
+        setNewGame((g) => ({ ...g, season_id: active.id }));
+        setEspnSeasonId(active.id);
+      }
       await loadAllGames();
     } else if (tab === "seasons") {
       const { data } = await supabase.from("seasons").select("*").order("id");
