@@ -177,6 +177,7 @@ export default function AdminPage() {
     return month >= 4 ? "post" : "regular";
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [endSeasonInput, setEndSeasonInput] = useState<Record<number, string>>({});
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const showToast = (msg: string) => {
@@ -448,7 +449,7 @@ export default function AdminPage() {
               {/* ESPN 경기 가져오기 */}
               <div className="card" style={{ marginBottom: 12, overflow: "visible" }}>
                 <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
-                  🏀 ESPN 경기 자동 등록
+                  🏀 경기 자동 등록
                 </div>
 
                 {/* 날짜 범위 2열 */}
@@ -488,10 +489,17 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                <button className="btn-primary" style={{ width: "100%" }}
-                  onClick={syncESPN} disabled={espnLoading}>
-                  {espnLoading ? "가져오는 중..." : "ESPN에서 경기 가져오기"}
-                </button>
+                {/* 경기 가져오기 + 자동채점 2열 */}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn-primary" style={{ flex: 1 }}
+                    onClick={syncESPN} disabled={espnLoading}>
+                    {espnLoading ? "가져오는 중..." : "경기 가져오기"}
+                  </button>
+                  <button className="btn-primary" style={{ flex: 1, background: "var(--accent2)" }}
+                    onClick={gradeGamesAuto} disabled={gradeLoading}>
+                    {gradeLoading ? "채점 중..." : "⚡ 자동채점 실행"}
+                  </button>
+                </div>
 
                 {espnResult && (
                   <div style={{
@@ -503,14 +511,6 @@ export default function AdminPage() {
                     {espnResult}
                   </div>
                 )}
-              </div>
-
-              {/* 자동채점 - 버튼만 */}
-              <div className="card" style={{ marginBottom: 12 }}>
-                <button className="btn-primary" style={{ width: "100%", background: "var(--accent2)" }}
-                  onClick={gradeGamesAuto} disabled={gradeLoading}>
-                  {gradeLoading ? "채점 중..." : "⚡ 자동채점 실행"}
-                </button>
               </div>
 
               {/* 경기 추가 폼 - 접기/펼치기 */}
@@ -762,48 +762,73 @@ export default function AdminPage() {
               ) : (
                 <>
                   {pagedGames.map((game) => (
-                    <div key={game.id} className="card">
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                          {format(new Date(game.start_time), "M/d HH:mm")} · {game.round}
-                        </span>
-                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          {game.winner && <span className="badge badge-correct">채점완료</span>}
+                    <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
+                      {/* 3컬럼 메인 행 */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {/* 좌: 라운드 + 날짜시간 */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, flexShrink: 0, minWidth: 56 }}>
+                          <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 5px", fontWeight: 700, textAlign: "center", whiteSpace: "nowrap" }}>
+                            {game.round}
+                          </span>
+                          <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                            {format(new Date(game.start_time), "M/d HH:mm")}
+                          </span>
+                        </div>
+                        {/* 중: 팀명 vs 팀명 */}
+                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontSize: 12, fontWeight: 600 }}>
+                          <span>{getTeamAbbr(game.home_team)}</span>
+                          <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>vs</span>
+                          <span>{getTeamAbbr(game.away_team)}</span>
+                        </div>
+                        {/* 우: 채점완료 뱃지 + 삭제 */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
+                          {game.winner && <span className="badge badge-correct" style={{ fontSize: 10 }}>채점완료</span>}
                           <button onClick={() => deleteGame(game.id)}
-                            style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 12, cursor: "pointer" }}>
+                            style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
                             삭제
                           </button>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                        {getTeamKo(game.home_team)} ({getTeamAbbr(game.home_team)}) vs {getTeamKo(game.away_team)} ({getTeamAbbr(game.away_team)})
+
+                      {/* 승리팀 선택 / 채점 변경 */}
+                      <div style={{ marginTop: 8 }}>
+                        {regradeGameId !== game.id ? (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              onClick={() => game.winner ? setRegradeGameId(game.id) : resetAndRegrade(game.id, "home")}
+                              style={{ flex: 1, padding: "5px", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                background: game.winner === "home" ? "rgba(34,197,94,0.2)" : "var(--surface2)",
+                                color: game.winner === "home" ? "var(--green)" : "var(--text-muted)",
+                                border: game.winner === "home" ? "1px solid rgba(34,197,94,0.4)" : "1px solid var(--border)" }}>
+                              {getTeamAbbr(game.home_team)} 승{game.winner === "home" ? " ✓" : ""}
+                            </button>
+                            <button
+                              onClick={() => game.winner ? setRegradeGameId(game.id) : resetAndRegrade(game.id, "away")}
+                              style={{ flex: 1, padding: "5px", borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                background: game.winner === "away" ? "rgba(59,130,246,0.2)" : "var(--surface2)",
+                                color: game.winner === "away" ? "var(--accent2)" : "var(--text-muted)",
+                                border: game.winner === "away" ? "1px solid rgba(59,130,246,0.4)" : "1px solid var(--border)" }}>
+                              {getTeamAbbr(game.away_team)} 승{game.winner === "away" ? " ✓" : ""}
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <div style={{ fontSize: 11, color: "var(--gold)", marginBottom: 6 }}>⚠️ 재채점합니다</div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button className="action-btn btn-approve" style={{ flex: 1, fontSize: 11 }}
+                                onClick={() => resetAndRegrade(game.id, "home")}>
+                                {getTeamAbbr(game.home_team)} 승
+                              </button>
+                              <button className="action-btn" style={{ flex: 1, fontSize: 11, background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.2)" }}
+                                onClick={() => resetAndRegrade(game.id, "away")}>
+                                {getTeamAbbr(game.away_team)} 승
+                              </button>
+                            </div>
+                            <button style={{ width: "100%", marginTop: 4, padding: "3px", background: "transparent", color: "var(--text-muted)", border: "none", fontSize: 11, cursor: "pointer" }}
+                              onClick={() => setRegradeGameId(null)}>취소</button>
+                          </div>
+                        )}
                       </div>
-                      {game.winner && regradeGameId !== game.id && (
-                        <button
-                          style={{ width: "100%", padding: "6px", background: "var(--surface2)", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, cursor: "pointer" }}
-                          onClick={() => setRegradeGameId(game.id)}>
-                          ✏️ 채점 변경 (현재: {game.winner === "home" ? getTeamAbbr(game.home_team) : getTeamAbbr(game.away_team)} 승)
-                        </button>
-                      )}
-                      {regradeGameId === game.id && (
-                        <div>
-                          <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 8 }}>
-                            ⚠️ 기존 채점을 초기화하고 재채점합니다
-                          </div>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button className="action-btn btn-approve" style={{ flex: 1 }}
-                              onClick={() => resetAndRegrade(game.id, "home")}>
-                              {getTeamAbbr(game.home_team)} 승으로 변경
-                            </button>
-                            <button className="action-btn" style={{ flex: 1, background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.2)" }}
-                              onClick={() => resetAndRegrade(game.id, "away")}>
-                              {getTeamAbbr(game.away_team)} 승으로 변경
-                            </button>
-                          </div>
-                          <button style={{ width: "100%", marginTop: 6, padding: "4px", background: "transparent", color: "var(--text-muted)", border: "none", fontSize: 12, cursor: "pointer" }}
-                            onClick={() => setRegradeGameId(null)}>취소</button>
-                        </div>
-                      )}
                     </div>
                   ))}
 
@@ -911,23 +936,47 @@ export default function AdminPage() {
                 🏆 새 시즌 시작
               </button>
               {seasons.map((s) => (
-                <div key={s.id} className="card"
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{s.name}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                      {format(new Date(s.started_at), "yyyy년 M월 d일")} 시작
+                <div key={s.id} className="card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: s.is_active ? 10 : 0 }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{s.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        {format(new Date(s.started_at), "yyyy년 M월 d일")} 시작
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {s.is_active && <span className="badge badge-correct">활성</span>}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    {s.is_active && <span className="badge badge-correct">활성</span>}
-                    {s.is_active && (
-                      <button onClick={() => endSeason(s.id)}
-                        style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}>
-                        시즌 종료
-                      </button>
-                    )}
-                  </div>
+                  {s.is_active && (
+                    <div>
+                      <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>
+                        시즌을 종료하려면 <strong style={{ color: "#ef4444" }}>시즌종료</strong>를 입력하세요.
+                      </p>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input
+                          type="text"
+                          className="text-input"
+                          placeholder="시즌종료"
+                          value={endSeasonInput[s.id] || ""}
+                          onChange={(e) => setEndSeasonInput((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                          style={{ flex: 1, fontSize: 13 }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (endSeasonInput[s.id] === "시즌종료") {
+                              endSeason(s.id);
+                              setEndSeasonInput((prev) => ({ ...prev, [s.id]: "" }));
+                            } else {
+                              showToast("⚠️ '시즌종료'를 정확히 입력해주세요.");
+                            }
+                          }}
+                          style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "4px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          종료
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </>
