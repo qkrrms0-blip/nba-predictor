@@ -205,7 +205,7 @@ export default function VotingPage() {
       .eq("user_id", user.id).in("game_id", gameIdArr);
 
     setTotalVotableCount(votableIds.size);
-    setMyVoteCount((myVotes ?? []).filter((v: Vote) => votableIds.has(v.game_id)).length);
+    setMyVoteCount((myVotes ?? []).filter((v: any) => votableIds.has(v.game_id)).length);
   }, []);
 
   useEffect(() => { loadTopRankers(); }, [loadTopRankers]);
