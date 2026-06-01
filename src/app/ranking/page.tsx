@@ -48,7 +48,8 @@ export default function RankingPage() {
     const { data: votes } = await supabase
       .from("votes")
       .select("user_id, is_correct, points")
-      .eq("season_id", seasonId);
+      .eq("season_id", seasonId)
+      .not("is_correct", "is", null);
 
     if (!allUsers) {
       setRankings([]);

@@ -113,6 +113,7 @@ export default function VotingPage() {
       .from("games").select("*")
       .gte("start_time", dayStart.toISOString())
       .lte("start_time", dayEnd.toISOString())
+      .is("winner", null)
       .order("start_time");
 
     if (!gamesData || gamesData.length === 0) {

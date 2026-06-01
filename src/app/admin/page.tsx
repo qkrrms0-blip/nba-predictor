@@ -66,12 +66,6 @@ function defaultDeadline() {
   return format(d, "yyyy-MM-dd'T'HH:mm");
 }
 
-const PLAYOFF_MONTHS = [
-  { value: "04", label: "4월" },
-  { value: "05", label: "5월" },
-  { value: "06", label: "6월" },
-];
-
 const ITEMS_PER_PAGE = 10;
 
 function TeamSelect({
@@ -163,6 +157,12 @@ export default function AdminPage() {
   const [gamePage, setGamePage] = useState(1);
   const [allGames, setAllGames] = useState<Game[]>([]);
   const [daysWithGames, setDaysWithGames] = useState<number[]>([]);
+  const [completedSeasonType, setCompletedSeasonType] = useState<"regular" | "post">(() => {
+    const month = new Date().getMonth() + 1;
+    return month >= 4 ? "post" : "regular";
+  });
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -217,7 +217,23 @@ export default function AdminPage() {
   }, [filterMonth, allGames]);
 
   // 표시할 경기 목록 계산
+  // 달력용 날짜별 경기 수
+  const gameDayMap: Record<string, number> = {};
+  allGames.filter(g => !g.season_type || g.season_type === completedSeasonType).forEach((g) => {
+    const key = format(new Date(g.start_time), "yyyy-MM-dd");
+    gameDayMap[key] = (gameDayMap[key] || 0) + 1;
+  });
+
+  const handleAdminCalendarDay = (dateStr: string) => {
+    const d = new Date(dateStr);
+    setFilterMonth(format(d, "MM"));
+    setFilterDay(String(d.getDate()));
+    setCalendarOpen(false);
+    setGamePage(1);
+  };
+
   const filteredGames = allGames.filter((g) => {
+    if (g.season_type && g.season_type !== completedSeasonType) return false;
     const d = new Date(g.start_time);
     if (format(d, "MM") !== filterMonth) return false;
     if (filterDay !== null && d.getDate() !== Number(filterDay)) return false;
@@ -621,49 +637,103 @@ export default function AdminPage() {
 
               {completedSectionOpen && <>
 
-              {/* 월 선택 (원형 버튼) */}
-              <div style={{ display: "flex", gap: 10, marginBottom: 12, marginTop: 12, justifyContent: "center" }}>
-                {PLAYOFF_MONTHS.map((m) => (
-                  <button key={m.value}
-                    onClick={() => { setFilterMonth(m.value); setFilterDay(null); setGamePage(1); }}
-                    style={{
-                      width: 52, height: 52, borderRadius: "50%",
-                      background: filterMonth === m.value ? "var(--accent)" : "var(--surface2)",
-                      color: filterMonth === m.value ? "#fff" : "var(--text-muted)",
-                      border: filterMonth === m.value ? "none" : "1px solid var(--border)",
-                      fontWeight: 700, fontSize: 14, cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}>
-                    {m.label}
-                  </button>
-                ))}
+              {/* history 스타일 필터 바 */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+                <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
+                  {(["regular", "post"] as const).map((type) => (
+                    <button key={type}
+                      onClick={() => { setCompletedSeasonType(type); setFilterMonth(format(new Date(), "MM")); setFilterDay(null); setGamePage(1); }}
+                      style={{ padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
+                        background: completedSeasonType === type ? "var(--accent)" : "var(--surface2)",
+                        color: completedSeasonType === type ? "#fff" : "var(--text-muted)" }}>
+                      {type === "regular" ? "정규" : "POST"}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
+                {(completedSeasonType === "regular"
+                  ? ["10","11","12","01","02","03","04"]
+                  : ["04","05","06"]
+                ).map((m) => {
+                  const labels: Record<string,string> = {"01":"1월","02":"2월","03":"3월","04":"4월","05":"5월","06":"6월","10":"10월","11":"11월","12":"12월"};
+                  return (
+                    <button key={m} onClick={() => { setFilterMonth(m); setFilterDay(null); setGamePage(1); }}
+                      style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 20,
+                        background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
+                        color: filterMonth === m ? "#fff" : "var(--text-muted)",
+                        border: filterMonth === m ? "none" : "1px solid var(--border)",
+                        fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+                      {labels[m]}
+                    </button>
+                  );
+                })}
+                <button onClick={() => setCalendarOpen(!calendarOpen)}
+                  style={{ marginLeft: "auto", flexShrink: 0, width: 32, height: 32, borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: calendarOpen ? "var(--accent)" : "var(--surface2)",
+                    color: calendarOpen ? "#fff" : "var(--text-muted)",
+                    cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  📅
+                </button>
               </div>
 
-              {/* 날짜 선택 (경기 있는 날만 원형 버튼) */}
+              {/* 달력 패널 */}
+              {calendarOpen && (
+                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()-1, 1))}
+                      style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>‹</button>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>
+                      {calendarMonth.toLocaleDateString("ko-KR", { year: "numeric", month: "long" })}
+                    </span>
+                    <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()+1, 1))}
+                      style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>›</button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+                    {["일","월","화","수","목","금","토"].map(d => (
+                      <div key={d} style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, padding: "2px 0" }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                    {(() => {
+                      const year = calendarMonth.getFullYear();
+                      const month = calendarMonth.getMonth();
+                      const firstDow = new Date(year, month, 1).getDay();
+                      const daysInMonth = new Date(year, month+1, 0).getDate();
+                      const cells = [];
+                      for (let i = 0; i < firstDow; i++) cells.push(<div key={`e-${i}`} />);
+                      for (let d = 1; d <= daysInMonth; d++) {
+                        const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                        const cnt = gameDayMap[dateStr] || 0;
+                        const isSel = filterDay === String(d) && filterMonth === String(month+1).padStart(2,"0");
+                        cells.push(
+                          <div key={d} onClick={() => cnt > 0 ? handleAdminCalendarDay(dateStr) : undefined}
+                            style={{ textAlign: "center", padding: "4px 2px", borderRadius: 8, cursor: cnt > 0 ? "pointer" : "default",
+                              background: isSel ? "var(--accent)" : "transparent", minHeight: 44,
+                              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+                              opacity: cnt === 0 ? 0.25 : 1 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: isSel ? "#fff" : "var(--text)", lineHeight: 1 }}>{d}</span>
+                            {cnt > 0 && <span style={{ fontSize: 9, fontWeight: 600, color: isSel ? "#fff" : "var(--accent)" }}>{cnt}</span>}
+                          </div>
+                        );
+                      }
+                      return cells;
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* 일 선택 버튼 */}
               {daysWithGames.length > 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12, justifyContent: "center" }}>
-                  <button
-                    onClick={() => { setFilterDay(null); setGamePage(1); }}
-                    style={{
-                      width: 40, height: 40, borderRadius: "50%",
-                      background: filterDay === null ? "var(--accent2)" : "var(--surface2)",
-                      color: filterDay === null ? "#fff" : "var(--text-muted)",
-                      border: filterDay === null ? "none" : "1px solid var(--border)",
-                      fontWeight: 600, fontSize: 12, cursor: "pointer",
-                    }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                  <button onClick={() => { setFilterDay(null); setGamePage(1); }}
+                    style={{ padding: "5px 14px", borderRadius: 20, background: filterDay === null ? "var(--accent2)" : "var(--surface2)", color: filterDay === null ? "#fff" : "var(--text-muted)", border: filterDay === null ? "none" : "1px solid var(--border)", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
                     전체
                   </button>
                   {daysWithGames.map((day) => (
-                    <button key={day}
-                      onClick={() => { setFilterDay(String(day)); setGamePage(1); }}
-                      style={{
-                        width: 40, height: 40, borderRadius: "50%",
-                        background: filterDay === String(day) ? "var(--accent2)" : "var(--surface2)",
-                        color: filterDay === String(day) ? "#fff" : "var(--text)",
-                        border: filterDay === String(day) ? "none" : "1px solid var(--border)",
-                        fontWeight: 600, fontSize: 12, cursor: "pointer",
-                      }}>
-                      {day}
+                    <button key={day} onClick={() => { setFilterDay(String(day)); setGamePage(1); }}
+                      style={{ padding: "5px 12px", borderRadius: 20, background: filterDay === String(day) ? "var(--accent2)" : "var(--surface2)", color: filterDay === String(day) ? "#fff" : "var(--text)", border: filterDay === String(day) ? "none" : "1px solid var(--border)", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                      {day}일
                     </button>
                   ))}
                 </div>
