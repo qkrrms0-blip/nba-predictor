@@ -131,7 +131,7 @@ export default function VotingPage() {
     // 마감 전 경기 id set
     const votableIds = new Set(
       gamesData
-        .filter((g: GameWithVotes) => {
+        .filter((g: any) => {
           const deadline = g.vote_deadline ? new Date(g.vote_deadline) : new Date(g.start_time);
           return deadline > now;
         })
@@ -193,11 +193,11 @@ export default function VotingPage() {
 
     const votableIds = new Set(
       gamesData
-        .filter((g: GameWithVotes) => {
+        .filter((g: any) => {
           const deadline = g.vote_deadline ? new Date(g.vote_deadline) : new Date(g.start_time);
           return deadline > now;
         })
-        .map((g: GameWithVotes) => g.id)
+        .map((g: any) => g.id)
     );
 
     const gameIdArr = Array.from(votableIds) as number[];
