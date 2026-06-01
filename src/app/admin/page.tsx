@@ -4,7 +4,22 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
-import { User, Season, Game, Round, ROUND_POINTS } from "@/lib/types";
+import { User, Season, Round, ROUND_POINTS } from "@/lib/types";
+
+interface Game {
+  id: number;
+  season_id: number;
+  home_team: string;
+  away_team: string;
+  home_score: number | null;
+  away_score: number | null;
+  start_time: string;
+  round: Round;
+  winner: "home" | "away" | null;
+  external_id: string | null;
+  vote_deadline?: string;
+  season_type?: "regular" | "post";
+}
 
 type AdminTab = "users" | "games" | "seasons";
 
