@@ -118,8 +118,6 @@ export default function VotingPage() {
 
     if (!gamesData || gamesData.length === 0) {
       setGames([]);
-      setMyVoteCount(0);
-      setTotalVotableCount(0);
       setLoading(false);
       return;
     }
@@ -140,9 +138,7 @@ export default function VotingPage() {
         .map((g: Game) => g.id)
     );
 
-    // 투표 현황: 분모=마감 전 경기, 분자=그 중 내가 투표한 수
-    setTotalVotableCount(votableIds.size);
-    setMyVoteCount((myVotes ?? []).filter((v: Vote) => votableIds.has(v.game_id)).length);
+    // 투표 현황은 loadOverallVoteCount에서 4일치 합산으로 관리
 
     // 마감된 경기 전체 투표 현황 (퍼센트 바)
     const deadlinePassedIds = gamesData
@@ -174,7 +170,46 @@ export default function VotingPage() {
     setLoading(false);
   }, []);
 
+  // 오늘~+3일 4일치 전체 투표 현황
+  const loadOverallVoteCount = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const now = new Date();
+    const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = addDays(now, 3); dayEnd.setHours(23, 59, 59, 999);
+
+    const { data: gamesData } = await supabase
+      .from("games").select("id, start_time, vote_deadline")
+      .gte("start_time", dayStart.toISOString())
+      .lte("start_time", dayEnd.toISOString())
+      .is("winner", null);
+
+    if (!gamesData || gamesData.length === 0) {
+      setMyVoteCount(0);
+      setTotalVotableCount(0);
+      return;
+    }
+
+    const votableIds = new Set(
+      gamesData
+        .filter((g: GameWithVotes) => {
+          const deadline = g.vote_deadline ? new Date(g.vote_deadline) : new Date(g.start_time);
+          return deadline > now;
+        })
+        .map((g: GameWithVotes) => g.id)
+    );
+
+    const gameIdArr = Array.from(votableIds) as number[];
+    const { data: myVotes } = await supabase.from("votes").select("game_id")
+      .eq("user_id", user.id).in("game_id", gameIdArr);
+
+    setTotalVotableCount(votableIds.size);
+    setMyVoteCount((myVotes ?? []).filter((v: Vote) => votableIds.has(v.game_id)).length);
+  }, []);
+
   useEffect(() => { loadTopRankers(); }, [loadTopRankers]);
+  useEffect(() => { loadOverallVoteCount(); }, [loadOverallVoteCount]);
   useEffect(() => { loadGames(dateOffset); }, [dateOffset, loadGames]);
 
   const handleVote = async (gameId: number, team: "home" | "away", seasonId: number) => {
@@ -186,8 +221,8 @@ export default function VotingPage() {
       const { error } = await supabase.from("votes").delete().eq("id", game.myVote.id);
       if (!error) {
         showToast("투표가 취소되었습니다.");
-        setMyVoteCount((c) => Math.max(0, c - 1));
         loadGames(dateOffset);
+        loadOverallVoteCount();
       }
       return;
     }
@@ -199,8 +234,8 @@ export default function VotingPage() {
     if (error) showToast("❌ 투표 실패: " + error.message);
     else {
       showToast("✅ 투표 완료!");
-      if (!wasVoted) setMyVoteCount((c) => c + 1);
       loadGames(dateOffset);
+      loadOverallVoteCount();
     }
   };
 
