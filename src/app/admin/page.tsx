@@ -32,7 +32,6 @@ const NBA_TEAMS_KO = [
   { ko: "뉴욕 닉스", en: "New York Knicks", abbr: "NYK", conf: "east" },
   { ko: "댈러스 매버릭스", en: "Dallas Mavericks", abbr: "DAL", conf: "west" },
   { ko: "덴버 너기츠", en: "Denver Nuggets", abbr: "DEN", conf: "west" },
-  { ko: "デトロイ트 피스톤스", en: "Detroit Pistons", abbr: "DET", conf: "east" },
   { ko: "디트로이트 피스톤스", en: "Detroit Pistons", abbr: "DET", conf: "east" },
   { ko: "LA 클리퍼스", en: "LA Clippers", abbr: "LAC", conf: "west" },
   { ko: "LA 레이커스", en: "Los Angeles Lakers", abbr: "LAL", conf: "west" },

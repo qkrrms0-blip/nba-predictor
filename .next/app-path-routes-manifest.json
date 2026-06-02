@@ -1,0 +1,15 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/admin/page": "/admin",
+  "/api/games/grade/route": "/api/games/grade",
+  "/api/games/sync/route": "/api/games/sync",
+  "/api/push/subscribe/route": "/api/push/subscribe",
+  "/auth/callback/route": "/auth/callback",
+  "/history/page": "/history",
+  "/login/page": "/login",
+  "/page": "/",
+  "/pending/page": "/pending",
+  "/ranking/page": "/ranking",
+  "/voting/page": "/voting"
+}

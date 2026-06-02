@@ -1,6 +1,15 @@
 {
-  "/voting/page": "app/voting/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/admin/page": "app/admin/page.js",
+  "/api/games/grade/route": "app/api/games/grade/route.js",
+  "/api/games/sync/route": "app/api/games/sync/route.js",
+  "/api/push/subscribe/route": "app/api/push/subscribe/route.js",
+  "/auth/callback/route": "app/auth/callback/route.js",
   "/history/page": "app/history/page.js",
-  "/ranking/page": "app/ranking/page.js"
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/pending/page": "app/pending/page.js",
+  "/ranking/page": "app/ranking/page.js",
+  "/voting/page": "app/voting/page.js"
 }
