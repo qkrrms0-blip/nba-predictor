@@ -2,8 +2,18 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@/lib/types";
+
+const VAPID_PUBLIC_KEY = "BKL6UKrrJZ7gSC6PF2jmAF7E0NWMGnMlv4w5omFMm_U0rNBOPE7RX-p24CjjblYc9ns_Ndo1tQxpO2hTD6OPKnM";
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
 
 interface Props {
   user: User;
@@ -55,6 +65,40 @@ export default function AppShell({ user, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  const [notifPermission, setNotifPermission] = useState<string>("default");
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestPushPermission = async () => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+    const permission = await Notification.requestPermission();
+    setNotifPermission(permission);
+    if (permission !== "granted") return;
+
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return;
+
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+
+    const { endpoint, keys } = subscription.toJSON() as {
+      endpoint: string;
+      keys: { p256dh: string; auth: string };
+    };
+
+    await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint, p256dh: keys.p256dh, auth: keys.auth }),
+    });
+  };
 
   const navItems = user.role === "admin" ? [...NAV_ITEMS, ADMIN_NAV] : NAV_ITEMS;
 
@@ -71,6 +115,18 @@ export default function AppShell({ user, children }: Props) {
         </div>
         <div className="user-badge">
           <span>{user.name}</span>
+          {/* 알림 허용 버튼 — 아직 안 물어본 경우만 표시 */}
+          {"Notification" in (typeof window !== "undefined" ? window : {}) && notifPermission === "default" && (
+            <button
+              onClick={requestPushPermission}
+              style={{
+                background: "rgba(247,80,27,0.15)", border: "1px solid rgba(247,80,27,0.4)",
+                color: "var(--accent)", padding: "4px 10px", borderRadius: 20,
+                fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)",
+              }}>
+              🔔 알림
+            </button>
+          )}
           <button className="logout-btn" onClick={handleLogout}>로그아웃</button>
         </div>
       </header>
