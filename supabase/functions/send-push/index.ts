@@ -21,7 +21,6 @@ async function generateVapidJWT(audience: string): Promise<string> {
 
   const signingInput = `${encode(header)}.${encode(payload)}`;
 
-  // base64url → ArrayBuffer
   const rawKey = Uint8Array.from(
     atob(VAPID_PRIVATE_KEY.replace(/-/g, "+").replace(/_/g, "/")),
     (c) => c.charCodeAt(0)
@@ -71,6 +70,13 @@ async function sendWebPush(subscription: {
 }
 
 Deno.serve(async () => {
+  // KST 기준 0시~5시 사이면 알림 안 보냄
+  const nowKST2 = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+  const kstHour = nowKST2.getUTCHours();
+  if (kstHour >= 0 && kstHour < 5) {
+    return new Response(JSON.stringify({ message: "취침 시간대 알림 제외" }), { status: 200 });
+  }
+
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -78,7 +84,7 @@ Deno.serve(async () => {
     const nowUTC = new Date();
     const kstOffset = 9 * 60 * 60 * 1000;
     const nowKST = new Date(nowUTC.getTime() + kstOffset);
-    const todayKST = nowKST.toISOString().slice(0, 10); // "2025-06-01"
+    const todayKST = nowKST.toISOString().slice(0, 10);
 
     const dayStartUTC = new Date(`${todayKST}T00:00:00+09:00`).toISOString();
     const dayEndUTC = new Date(`${todayKST}T23:59:59+09:00`).toISOString();

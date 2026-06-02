@@ -106,6 +106,21 @@ export default function AppShell({ user, children }: Props) {
     });
   };
 
+  const cancelPushPermission = async () => {
+    if (!("serviceWorker" in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const subscription = await reg.pushManager.getSubscription();
+    if (subscription) {
+      await fetch("/api/push/subscribe", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+      });
+      await subscription.unsubscribe();
+    }
+    setNotifPermission("denied");
+  };
+
   const navItems = user.role === "admin" ? [...NAV_ITEMS, ADMIN_NAV] : NAV_ITEMS;
 
   const handleLogout = async () => {
@@ -121,17 +136,31 @@ export default function AppShell({ user, children }: Props) {
         </div>
         <div className="user-badge">
           <span>{user.name}</span>
-          {/* 알림 허용 버튼 — 아직 안 물어본 경우만 표시 */}
-          {"Notification" in (typeof window !== "undefined" ? window : {}) && notifPermission === "default" && (
-            <button
-              onClick={requestPushPermission}
-              style={{
-                background: "rgba(247,80,27,0.15)", border: "1px solid rgba(247,80,27,0.4)",
-                color: "var(--accent)", padding: "4px 10px", borderRadius: 20,
-                fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)",
-              }}>
-              🔔 알림
-            </button>
+          {"Notification" in (typeof window !== "undefined" ? window : {}) && (
+            <>
+              {notifPermission === "default" && (
+                <button
+                  onClick={requestPushPermission}
+                  style={{
+                    background: "rgba(247,80,27,0.15)", border: "1px solid rgba(247,80,27,0.4)",
+                    color: "var(--accent)", padding: "4px 10px", borderRadius: 20,
+                    fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)",
+                  }}>
+                  🔔 알림
+                </button>
+              )}
+              {notifPermission === "granted" && (
+                <button
+                  onClick={cancelPushPermission}
+                  style={{
+                    background: "rgba(100,100,100,0.15)", border: "1px solid rgba(100,100,100,0.3)",
+                    color: "var(--text-muted)", padding: "4px 10px", borderRadius: 20,
+                    fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)",
+                  }}>
+                  🔕 알림끄기
+                </button>
+              )}
+            </>
           )}
           <button className="logout-btn" onClick={handleLogout}>로그아웃</button>
         </div>
