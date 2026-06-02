@@ -9,10 +9,16 @@ import { User } from "@/lib/types";
 const VAPID_PUBLIC_KEY = "BKL6UKrrJZ7gSC6PF2jmAF7E0NWMGnMlv4w5omFMm_U0rNBOPE7RX-p24CjjblYc9ns_Ndo1tQxpO2hTD6OPKnM";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
   const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 interface Props {
@@ -85,7 +91,7 @@ export default function AppShell({ user, children }: Props) {
 
     const subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource,
     });
 
     const { endpoint, keys } = subscription.toJSON() as {
