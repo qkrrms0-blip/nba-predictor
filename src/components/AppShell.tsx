@@ -71,11 +71,23 @@ export default function AppShell({ user, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+  // ✅ 브라우저 권한과 실제 구독 여부를 분리
   const [notifPermission, setNotifPermission] = useState<string>("default");
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
 
   useEffect(() => {
-    if ("Notification" in window) {
-      setNotifPermission(Notification.permission);
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+
+    const permission = Notification.permission;
+    setNotifPermission(permission);
+
+    // ✅ 권한이 granted일 때만 실제 구독 여부를 확인
+    if (permission === "granted") {
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.pushManager.getSubscription().then((sub) => {
+          setIsSubscribed(!!sub);
+        });
+      });
     }
   }, []);
 
@@ -87,7 +99,10 @@ export default function AppShell({ user, children }: Props) {
 
     const reg = await navigator.serviceWorker.ready;
     const existing = await reg.pushManager.getSubscription();
-    if (existing) return;
+    if (existing) {
+      setIsSubscribed(true);
+      return;
+    }
 
     const subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -104,6 +119,9 @@ export default function AppShell({ user, children }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endpoint, p256dh: keys.p256dh, auth: keys.auth }),
     });
+
+    // ✅ 구독 성공 시 구독 상태만 변경 (브라우저 권한은 그대로 "granted")
+    setIsSubscribed(true);
   };
 
   const cancelPushPermission = async () => {
@@ -118,7 +136,8 @@ export default function AppShell({ user, children }: Props) {
       });
       await subscription.unsubscribe();
     }
-    setNotifPermission("denied");
+    // ✅ 구독 해제 시 notifPermission은 건드리지 않고 isSubscribed만 false로
+    setIsSubscribed(false);
   };
 
   const navItems = user.role === "admin" ? [...NAV_ITEMS, ADMIN_NAV] : NAV_ITEMS;
@@ -127,6 +146,15 @@ export default function AppShell({ user, children }: Props) {
     await supabase.auth.signOut();
     router.replace("/login");
   };
+
+  // ✅ 버튼 표시 로직:
+  //   - 권한 미결정(default) → "🔔 알림" 버튼
+  //   - 권한 허용(granted) + 미구독 → "🔔 알림" 버튼 (구독 재등록)
+  //   - 권한 허용(granted) + 구독 중 → "🔕 알림끄기" 버튼
+  const showSubscribeBtn =
+    notifPermission === "default" ||
+    (notifPermission === "granted" && !isSubscribed);
+  const showUnsubscribeBtn = notifPermission === "granted" && isSubscribed;
 
   return (
     <>
@@ -138,7 +166,7 @@ export default function AppShell({ user, children }: Props) {
           <span>{user.name}</span>
           {"Notification" in (typeof window !== "undefined" ? window : {}) && (
             <>
-              {notifPermission === "default" && (
+              {showSubscribeBtn && (
                 <button
                   onClick={requestPushPermission}
                   style={{
@@ -149,7 +177,7 @@ export default function AppShell({ user, children }: Props) {
                   🔔 알림
                 </button>
               )}
-              {notifPermission === "granted" && (
+              {showUnsubscribeBtn && (
                 <button
                   onClick={cancelPushPermission}
                   style={{
