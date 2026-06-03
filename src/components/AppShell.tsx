@@ -95,6 +95,7 @@ export default function AppShell({ user, children }: Props) {
   // ── 팝업 열림 상태 ─────────────────────────────────────
   const [popupOpen, setPopupOpen] = useState<boolean>(false);
   const popupRef = useRef<HTMLDivElement>(null);
+  const nameRef  = useRef<HTMLSpanElement>(null);
 
   // 랜덤 자동투표 설정
   const [randomAutoVote, setRandomAutoVote] = useState<boolean>(false);
@@ -114,7 +115,10 @@ export default function AppShell({ user, children }: Props) {
   useEffect(() => {
     if (!popupOpen) return;
     const handler = (e: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+      if (
+        popupRef.current && !popupRef.current.contains(e.target as Node) &&
+        nameRef.current  && !nameRef.current.contains(e.target as Node)
+      ) {
         setPopupOpen(false);
       }
     };
@@ -206,6 +210,7 @@ export default function AppShell({ user, children }: Props) {
 
           {/* 이름 클릭 → 설정 팝업 */}
           <span
+            ref={nameRef}
             onClick={() => setPopupOpen((v) => !v)}
             style={{ cursor: "pointer", fontSize: 13, color: "var(--text-muted)" }}
           >
