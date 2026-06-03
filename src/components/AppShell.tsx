@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@/lib/types";
 
-const VAPID_PUBLIC_KEY = "BP-hdI0FvyIL1VXOuhcGoVn8SZl2g_4GXVWKTheZ2UyQWWc9BWNCGaHcKrV_j2A4LBhyxtQa0jlLsYja8hmSHjA";
+const VAPID_PUBLIC_KEY = "BJhwbTrxVeIRKCLhVqBi2CrW3-bA8jdoFRcTmWDEBJJej_kiNHj6lU0bScJwBqrIKBradCRNHk4lIWEWK5893Gk";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
