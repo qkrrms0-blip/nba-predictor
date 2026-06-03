@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const { error } = await adminSupabase
     .from("push_subscriptions")
     .upsert(
-      { user_id: user.id, endpoint, p256dh, auth },
+      { user_id: user.id, endpoint, p256dh, auth, no_weekend: false },
       { onConflict: "user_id,endpoint" }
     );
 
@@ -37,5 +37,26 @@ export async function DELETE(request: Request) {
     .eq("user_id", user.id)
     .eq("endpoint", endpoint);
 
+  return NextResponse.json({ success: true });
+}
+
+// 주말 알림 설정 ON/OFF
+export async function PATCH(request: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { weekend } = await request.json();
+  if (typeof weekend !== "boolean") {
+    return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
+  }
+
+  const adminSupabase = createAdminClient();
+  const { error } = await adminSupabase
+    .from("push_subscriptions")
+    .update({ no_weekend: !weekend })
+    .eq("user_id", user.id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

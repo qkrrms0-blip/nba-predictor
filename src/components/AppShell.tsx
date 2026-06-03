@@ -2,22 +2,18 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@/lib/types";
 
 const VAPID_PUBLIC_KEY = "BKL6UKrrJZ7gSC6PF2jmAF7E0NWMGnMlv4w5omFMm_U0rNBOPE7RX-p24CjjblYc9ns_Ndo1tQxpO2hTD6OPKnM";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
 }
 
@@ -32,7 +28,7 @@ const NAV_ITEMS = [
     label: "투표",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -41,7 +37,7 @@ const NAV_ITEMS = [
     label: "랭킹",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -50,7 +46,7 @@ const NAV_ITEMS = [
     label: "정산내역",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -61,37 +57,73 @@ const ADMIN_NAV = {
   label: "관리",
   icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
 };
 
+// 토글 스타일 (인라인)
+const togBase: React.CSSProperties = {
+  position: "relative",
+  width: 28,
+  height: 15,
+  borderRadius: 8,
+  cursor: "pointer",
+  flexShrink: 0,
+  border: "1px solid",
+  display: "inline-block",
+};
+const togOn: React.CSSProperties  = { ...togBase, background: "rgba(34,197,94,0.25)",  borderColor: "#4ade80" };
+const togOff: React.CSSProperties = { ...togBase, background: "rgba(239,68,68,0.2)",   borderColor: "#f87171" };
+const thumbOn: React.CSSProperties  = { position: "absolute", top: 1.5, left: 1.5,  width: 10, height: 10, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 4px rgba(74,222,128,0.8)",  transition: "left 0.2s" };
+const thumbOff: React.CSSProperties = { position: "absolute", top: 1.5, left: 15,   width: 10, height: 10, borderRadius: "50%", background: "#f87171", boxShadow: "0 0 4px rgba(248,113,113,0.8)", transition: "left 0.2s" };
+
 export default function AppShell({ user, children }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
+  const router   = useRouter();
   const supabase = createClient();
-  // ✅ 브라우저 권한과 실제 구독 여부를 분리
+
+  // ── 구독 상태 ──────────────────────────────────────────
+  // 브라우저 알림 권한과 실제 Push 구독 여부를 분리해서 관리
   const [notifPermission, setNotifPermission] = useState<string>("default");
-  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [isSubscribed, setIsSubscribed]       = useState<boolean>(false);
+
+  // ── 주말 알림 설정 ─────────────────────────────────────
+  const [weekendOn, setWeekendOn] = useState<boolean>(false);
+
+  // ── 팝업 열림 상태 ─────────────────────────────────────
+  const [popupOpen, setPopupOpen] = useState<boolean>(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // 랜덤 자동투표 설정 (미구현 — 추후 활성화)
+  // const [randomAutoVote, setRandomAutoVote] = useState<boolean>(false);
 
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-
     const permission = Notification.permission;
     setNotifPermission(permission);
-
-    // ✅ 권한이 granted일 때만 실제 구독 여부를 확인
     if (permission === "granted") {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.pushManager.getSubscription().then((sub) => {
-          setIsSubscribed(!!sub);
-        });
-      });
+      navigator.serviceWorker.ready.then((reg) =>
+        reg.pushManager.getSubscription().then((sub) => setIsSubscribed(!!sub))
+      );
     }
   }, []);
 
-  const requestPushPermission = async () => {
+  // 팝업 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!popupOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        setPopupOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [popupOpen]);
+
+  // 알림 ON (구독 등록)
+  const subscribe = async () => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
     const permission = await Notification.requestPermission();
     setNotifPermission(permission);
@@ -99,10 +131,7 @@ export default function AppShell({ user, children }: Props) {
 
     const reg = await navigator.serviceWorker.ready;
     const existing = await reg.pushManager.getSubscription();
-    if (existing) {
-      setIsSubscribed(true);
-      return;
-    }
+    if (existing) { setIsSubscribed(true); return; }
 
     const subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -120,11 +149,11 @@ export default function AppShell({ user, children }: Props) {
       body: JSON.stringify({ endpoint, p256dh: keys.p256dh, auth: keys.auth }),
     });
 
-    // ✅ 구독 성공 시 구독 상태만 변경 (브라우저 권한은 그대로 "granted")
     setIsSubscribed(true);
   };
 
-  const cancelPushPermission = async () => {
+  // 알림 OFF (구독 해제)
+  const unsubscribe = async () => {
     if (!("serviceWorker" in navigator)) return;
     const reg = await navigator.serviceWorker.ready;
     const subscription = await reg.pushManager.getSubscription();
@@ -136,60 +165,113 @@ export default function AppShell({ user, children }: Props) {
       });
       await subscription.unsubscribe();
     }
-    // ✅ 구독 해제 시 notifPermission은 건드리지 않고 isSubscribed만 false로
     setIsSubscribed(false);
+    setWeekendOn(false);
   };
 
-  const navItems = user.role === "admin" ? [...NAV_ITEMS, ADMIN_NAV] : NAV_ITEMS;
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.replace("/login");
+  // 주말 알림 토글 → DB 저장
+  const toggleWeekend = async () => {
+    const next = !weekendOn;
+    setWeekendOn(next);
+    await fetch("/api/push/subscribe", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weekend: next }),
+    });
   };
 
-  // ✅ 버튼 표시 로직:
-  //   - 권한 미결정(default) → "🔔 알림" 버튼
-  //   - 권한 허용(granted) + 미구독 → "🔔 알림" 버튼 (구독 재등록)
-  //   - 권한 허용(granted) + 구독 중 → "🔕 알림끄기" 버튼
-  const showSubscribeBtn =
-    notifPermission === "default" ||
-    (notifPermission === "granted" && !isSubscribed);
-  const showUnsubscribeBtn = notifPermission === "granted" && isSubscribed;
+  // 랜덤 자동투표 토글 (미구현 — 추후 활성화)
+  // const toggleRandomAutoVote = async () => { ... };
+
+  const navItems    = user.role === "admin" ? [...NAV_ITEMS, ADMIN_NAV] : NAV_ITEMS;
+  const handleLogout = async () => { await supabase.auth.signOut(); router.replace("/login"); };
+
+  const supportsNotif = typeof window !== "undefined" && "Notification" in window;
 
   return (
     <>
       <header className="app-header">
-        <div className="app-logo">
-          NBA<span>ONESHOT</span>
-        </div>
-        <div className="user-badge">
-          <span>{user.name}</span>
-          {"Notification" in (typeof window !== "undefined" ? window : {}) && (
-            <>
-              {showSubscribeBtn && (
+        <div className="app-logo">NBA<span>ONESHOT</span></div>
+
+        <div className="user-badge" style={{ position: "relative" }}>
+
+          {/* 이름 클릭 → 설정 팝업 */}
+          <span
+            onClick={() => setPopupOpen((v) => !v)}
+            style={{ cursor: "pointer", fontSize: 13, color: "var(--text-muted)" }}
+          >
+            {user.name}
+          </span>
+
+          {/* 설정 팝업 */}
+          {popupOpen && (
+            <div
+              ref={popupRef}
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                right: 0,
+                background: "#1c1c1c",
+                border: "1px solid #2e2e2e",
+                borderRadius: 10,
+                overflow: "hidden",
+                zIndex: 100,
+                whiteSpace: "nowrap",
+                animation: "popIn 0.18s ease",
+              }}
+            >
+              <style>{`@keyframes popIn { from { transform:scale(0.92); opacity:0 } to { transform:scale(1); opacity:1 } }`}</style>
+
+              {/* 팝업 헤더 */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 10px 6px", borderBottom: "1px solid #2a2a2a", gap: 16 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#bbb" }}>설정</span>
                 <button
-                  onClick={requestPushPermission}
-                  style={{
-                    background: "rgba(247,80,27,0.15)", border: "1px solid rgba(247,80,27,0.4)",
-                    color: "var(--accent)", padding: "4px 10px", borderRadius: 20,
-                    fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)",
-                  }}>
-                  🔔 알림
-                </button>
+                  onClick={() => setPopupOpen(false)}
+                  style={{ width: 16, height: 16, borderRadius: "50%", background: "#2a2a2a", border: "none", cursor: "pointer", color: "#777", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}
+                >✕</button>
+              </div>
+
+              {/* 알림 / 주말 한 행 */}
+              {supportsNotif && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px" }}>
+
+                  {/* 알림 토글 */}
+                  <span style={{ fontSize: 11, color: "#888" }}>알림</span>
+                  <div
+                    style={isSubscribed ? togOn : togOff}
+                    onClick={isSubscribed ? unsubscribe : subscribe}
+                  >
+                    <div style={isSubscribed ? thumbOn : thumbOff} />
+                  </div>
+
+                  {/* 구분선 */}
+                  <div style={{ width: 1, background: "#2a2a2a", alignSelf: "stretch", margin: "0 2px" }} />
+
+                  {/* 주말 토글 (알림 OFF면 비활성) */}
+                  <span style={{ fontSize: 11, color: "#888", opacity: isSubscribed ? 1 : 0.35 }}>주말</span>
+                  <div
+                    style={{ ...(weekendOn ? togOn : togOff), opacity: isSubscribed ? 1 : 0.35, pointerEvents: isSubscribed ? "auto" : "none" }}
+                    onClick={toggleWeekend}
+                  >
+                    <div style={weekendOn ? thumbOn : thumbOff} />
+                  </div>
+
+                  {/* 랜덤 자동투표 (미구현 — 추후 활성화) */}
+                  {/*
+                  <div style={{ width: 1, background: "#2a2a2a", alignSelf: "stretch", margin: "0 2px" }} />
+                  <span style={{ fontSize: 11, color: "#888", opacity: isSubscribed ? 1 : 0.35 }}>랜덤</span>
+                  <div
+                    style={{ ...(randomAutoVote ? togOn : togOff), opacity: isSubscribed ? 1 : 0.35, pointerEvents: isSubscribed ? "auto" : "none" }}
+                    onClick={toggleRandomAutoVote}
+                  >
+                    <div style={randomAutoVote ? thumbOn : thumbOff} />
+                  </div>
+                  */}
+                </div>
               )}
-              {showUnsubscribeBtn && (
-                <button
-                  onClick={cancelPushPermission}
-                  style={{
-                    background: "rgba(100,100,100,0.15)", border: "1px solid rgba(100,100,100,0.3)",
-                    color: "var(--text-muted)", padding: "4px 10px", borderRadius: 20,
-                    fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)",
-                  }}>
-                  🔕 알림끄기
-                </button>
-              )}
-            </>
+            </div>
           )}
+
           <button className="logout-btn" onClick={handleLogout}>로그아웃</button>
         </div>
       </header>
