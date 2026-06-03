@@ -240,14 +240,14 @@ export default function AppShell({ user, children }: Props) {
             <div
               ref={popupRef}
               style={{
-                position: "absolute",
-                top: "calc(100% + 8px)",
-                right: 0,
+                position: "fixed",
+                top: 52,
+                right: 12,
                 background: "transparent",
                 border: "1px solid #2e2e2e",
                 borderRadius: 10,
                 overflow: "hidden",
-                zIndex: 100,
+                zIndex: 1000,
                 whiteSpace: "nowrap",
                 animation: "popIn 0.18s ease",
                 backdropFilter: "blur(2px)",
@@ -287,12 +287,12 @@ export default function AppShell({ user, children }: Props) {
                     </div>
                   </div>
 
-                  {/* 2행 좌: 랜덤 (알림 OFF면 비활성) */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 6px 2px 0", borderRight: "1px solid #2a2a2a", opacity: isSubscribed ? 1 : 0.35 }}>
+                  {/* 2행 좌: 랜덤 (알림과 독립) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 6px 2px 0", borderRight: "1px solid #2a2a2a" }}>
                     <span style={{ fontSize: 11, color: "#888" }}>랜덤</span>
                     <div
-                      style={{ ...(randomAutoVote ? togOn : togOff), pointerEvents: isSubscribed ? "auto" : "none" }}
-                      onClick={isSubscribed ? toggleRandomAutoVote : undefined}
+                      style={{ ...(randomAutoVote ? togOn : togOff) }}
+                      onClick={toggleRandomAutoVote}
                     >
                       <div style={randomAutoVote ? thumbOn : thumbOff} />
                     </div>
