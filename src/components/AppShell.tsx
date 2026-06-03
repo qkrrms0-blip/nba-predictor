@@ -96,8 +96,8 @@ export default function AppShell({ user, children }: Props) {
   const [popupOpen, setPopupOpen] = useState<boolean>(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  // 랜덤 자동투표 설정 (미구현 — 추후 활성화)
-  // const [randomAutoVote, setRandomAutoVote] = useState<boolean>(false);
+  // 랜덤 자동투표 설정
+  const [randomAutoVote, setRandomAutoVote] = useState<boolean>(false);
 
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
@@ -167,6 +167,7 @@ export default function AppShell({ user, children }: Props) {
     }
     setIsSubscribed(false);
     setWeekendOn(false);
+    setRandomAutoVote(false);
   };
 
   // 주말 알림 토글 → DB 저장
@@ -180,8 +181,16 @@ export default function AppShell({ user, children }: Props) {
     });
   };
 
-  // 랜덤 자동투표 토글 (미구현 — 추후 활성화)
-  // const toggleRandomAutoVote = async () => { ... };
+  // 랜덤 자동투표 토글 → DB 저장
+  const toggleRandomAutoVote = async () => {
+    const next = !randomAutoVote;
+    setRandomAutoVote(next);
+    await fetch("/api/push/subscribe", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ random: next }),
+    });
+  };
 
   const navItems    = user.role === "admin" ? [...NAV_ITEMS, ADMIN_NAV] : NAV_ITEMS;
   const handleLogout = async () => { await supabase.auth.signOut(); router.replace("/login"); };
@@ -211,13 +220,14 @@ export default function AppShell({ user, children }: Props) {
                 position: "absolute",
                 top: "calc(100% + 8px)",
                 right: 0,
-                background: "#1c1c1c",
+                background: "transparent",
                 border: "1px solid #2e2e2e",
                 borderRadius: 10,
                 overflow: "hidden",
                 zIndex: 100,
                 whiteSpace: "nowrap",
                 animation: "popIn 0.18s ease",
+                backdropFilter: "blur(2px)",
               }}
             >
               <style>{`@keyframes popIn { from { transform:scale(0.92); opacity:0 } to { transform:scale(1); opacity:1 } }`}</style>
@@ -227,46 +237,52 @@ export default function AppShell({ user, children }: Props) {
                 <span style={{ fontSize: 12, fontWeight: 600, color: "#bbb" }}>설정</span>
                 <button
                   onClick={() => setPopupOpen(false)}
-                  style={{ width: 16, height: 16, borderRadius: "50%", background: "#2a2a2a", border: "none", cursor: "pointer", color: "#777", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{ width: 16, height: 16, borderRadius: "50%", background: "rgba(42,42,42,0.7)", border: "none", cursor: "pointer", color: "#777", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}
                 >✕</button>
               </div>
 
-              {/* 알림 / 주말 한 행 */}
+              {/* 토글 그리드: 2행 (알림·랜덤 / 주말·배당) */}
               {supportsNotif && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", padding: "6px 10px 8px" }}>
 
-                  {/* 알림 토글 */}
-                  <span style={{ fontSize: 11, color: "#888" }}>알림</span>
-                  <div
-                    style={isSubscribed ? togOn : togOff}
-                    onClick={isSubscribed ? unsubscribe : subscribe}
-                  >
-                    <div style={isSubscribed ? thumbOn : thumbOff} />
+                  {/* 1행 좌: 알림 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 6px 4px 0", borderRight: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a" }}>
+                    <span style={{ fontSize: 11, color: "#888" }}>알림</span>
+                    <div style={isSubscribed ? togOn : togOff} onClick={isSubscribed ? unsubscribe : subscribe}>
+                      <div style={isSubscribed ? thumbOn : thumbOff} />
+                    </div>
                   </div>
 
-                  {/* 구분선 */}
-                  <div style={{ width: 1, background: "#2a2a2a", alignSelf: "stretch", margin: "0 2px" }} />
-
-                  {/* 주말 토글 (알림 OFF면 비활성) */}
-                  <span style={{ fontSize: 11, color: "#888", opacity: isSubscribed ? 1 : 0.35 }}>주말</span>
-                  <div
-                    style={{ ...(weekendOn ? togOn : togOff), opacity: isSubscribed ? 1 : 0.35, pointerEvents: isSubscribed ? "auto" : "none" }}
-                    onClick={toggleWeekend}
-                  >
-                    <div style={weekendOn ? thumbOn : thumbOff} />
+                  {/* 1행 우: 랜덤 (알림 OFF면 비활성) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 0 4px 8px", borderBottom: "1px solid #2a2a2a", opacity: isSubscribed ? 1 : 0.35 }}>
+                    <span style={{ fontSize: 11, color: "#888" }}>랜덤</span>
+                    <div
+                      style={{ ...(randomAutoVote ? togOn : togOff), pointerEvents: isSubscribed ? "auto" : "none" }}
+                      onClick={isSubscribed ? toggleRandomAutoVote : undefined}
+                    >
+                      <div style={randomAutoVote ? thumbOn : thumbOff} />
+                    </div>
                   </div>
 
-                  {/* 랜덤 자동투표 (미구현 — 추후 활성화) */}
-                  {/*
-                  <div style={{ width: 1, background: "#2a2a2a", alignSelf: "stretch", margin: "0 2px" }} />
-                  <span style={{ fontSize: 11, color: "#888", opacity: isSubscribed ? 1 : 0.35 }}>랜덤</span>
-                  <div
-                    style={{ ...(randomAutoVote ? togOn : togOff), opacity: isSubscribed ? 1 : 0.35, pointerEvents: isSubscribed ? "auto" : "none" }}
-                    onClick={toggleRandomAutoVote}
-                  >
-                    <div style={randomAutoVote ? thumbOn : thumbOff} />
+                  {/* 2행 좌: 주말 (알림 OFF면 비활성) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 6px 2px 0", borderRight: "1px solid #2a2a2a", opacity: isSubscribed ? 1 : 0.35 }}>
+                    <span style={{ fontSize: 11, color: "#888" }}>주말</span>
+                    <div
+                      style={{ ...(weekendOn ? togOn : togOff), pointerEvents: isSubscribed ? "auto" : "none" }}
+                      onClick={isSubscribed ? toggleWeekend : undefined}
+                    >
+                      <div style={weekendOn ? thumbOn : thumbOff} />
+                    </div>
                   </div>
-                  */}
+
+                  {/* 2행 우: 배당 (미구현 — 항상 비활성) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 0 2px 8px", opacity: 0.3 }}>
+                    <span style={{ fontSize: 11, color: "#888" }}>배당</span>
+                    <div style={{ ...togOff, pointerEvents: "none" }}>
+                      <div style={thumbOff} />
+                    </div>
+                  </div>
+
                 </div>
               )}
             </div>
