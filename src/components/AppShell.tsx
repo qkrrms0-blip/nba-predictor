@@ -241,9 +241,9 @@ export default function AppShell({ user, children }: Props) {
                 >✕</button>
               </div>
 
-              {/* 토글 그리드: 2행 (알림·랜덤 / 주말·배당) */}
+              {/* 토글 그리드: 2행 (알림·주말 / 랜덤·배당) */}
               {supportsNotif && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", padding: "6px 10px 8px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", padding: "6px 10px 8px", background: "#1c1c1c" }}>
 
                   {/* 1행 좌: 알림 */}
                   <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 6px 4px 0", borderRight: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a" }}>
