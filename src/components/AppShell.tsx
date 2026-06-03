@@ -246,7 +246,6 @@ export default function AppShell({ user, children }: Props) {
                 background: "transparent",
                 border: "1px solid #2e2e2e",
                 borderRadius: 10,
-                overflow: "hidden",
                 zIndex: 1000,
                 whiteSpace: "nowrap",
                 animation: "popIn 0.18s ease",
