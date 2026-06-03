@@ -253,19 +253,8 @@ export default function AppShell({ user, children }: Props) {
                     </div>
                   </div>
 
-                  {/* 1행 우: 랜덤 (알림 OFF면 비활성) */}
+                  {/* 1행 우: 주말 (알림 OFF면 비활성) */}
                   <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 0 4px 8px", borderBottom: "1px solid #2a2a2a", opacity: isSubscribed ? 1 : 0.35 }}>
-                    <span style={{ fontSize: 11, color: "#888" }}>랜덤</span>
-                    <div
-                      style={{ ...(randomAutoVote ? togOn : togOff), pointerEvents: isSubscribed ? "auto" : "none" }}
-                      onClick={isSubscribed ? toggleRandomAutoVote : undefined}
-                    >
-                      <div style={randomAutoVote ? thumbOn : thumbOff} />
-                    </div>
-                  </div>
-
-                  {/* 2행 좌: 주말 (알림 OFF면 비활성) */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 6px 2px 0", borderRight: "1px solid #2a2a2a", opacity: isSubscribed ? 1 : 0.35 }}>
                     <span style={{ fontSize: 11, color: "#888" }}>주말</span>
                     <div
                       style={{ ...(weekendOn ? togOn : togOff), pointerEvents: isSubscribed ? "auto" : "none" }}
@@ -275,7 +264,19 @@ export default function AppShell({ user, children }: Props) {
                     </div>
                   </div>
 
-                  {/* 2행 우: 배당 (미구현 — 항상 비활성) */}
+                  {/* 2행 좌: 랜덤 (알림 OFF면 비활성) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 6px 2px 0", borderRight: "1px solid #2a2a2a", opacity: isSubscribed ? 1 : 0.35 }}>
+                    <span style={{ fontSize: 11, color: "#888" }}>랜덤</span>
+                    <div
+                      style={{ ...(randomAutoVote ? togOn : togOff), pointerEvents: isSubscribed ? "auto" : "none" }}
+                      onClick={isSubscribed ? toggleRandomAutoVote : undefined}
+                    >
+                      <div style={randomAutoVote ? thumbOn : thumbOff} />
+                    </div>
+                  </div>
+
+                  {/* 2행 우: 배당 (미구현 — 항상 비활성)
+                      활성화 시 odds-api.io 배당 참조하여 투표 처리 예정 */}
                   <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 0 2px 8px", opacity: 0.3 }}>
                     <span style={{ fontSize: 11, color: "#888" }}>배당</span>
                     <div style={{ ...togOff, pointerEvents: "none" }}>
