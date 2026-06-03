@@ -105,6 +105,12 @@ export default function AppShell({ user, children }: Props) {
 
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+
+    // 서비스워커 등록
+    navigator.serviceWorker.register("/sw.js").catch((err) =>
+      console.error("SW 등록 실패:", err)
+    );
+
     const permission = Notification.permission;
     setNotifPermission(permission);
     if (permission === "granted") {
@@ -264,7 +270,8 @@ export default function AppShell({ user, children }: Props) {
               </div>
 
               {/* 토글 그리드: 2행 (알림·주말 / 랜덤·배당) */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", padding: "6px 10px 8px", background: "#1c1c1c" }}>
+              {supportsNotif && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", padding: "6px 10px 8px", background: "#1c1c1c" }}>
 
                   {/* 1행 좌: 알림 */}
                   <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 6px 4px 0", borderRight: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a" }}>
@@ -320,6 +327,7 @@ export default function AppShell({ user, children }: Props) {
                   </div>
 
                 </div>
+              )}
             </div>
           )}
 
