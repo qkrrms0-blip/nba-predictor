@@ -6,7 +6,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 
-// VAPID JWT 생성
 async function generateVapidJWT(audience: string): Promise<string> {
   const header = { alg: "ES256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
@@ -70,82 +69,94 @@ async function sendWebPush(subscription: {
 }
 
 Deno.serve(async () => {
-  // KST 현재 시각
   const nowUTC = new Date();
   const kstOffset = 9 * 60 * 60 * 1000;
   const nowKST = new Date(nowUTC.getTime() + kstOffset);
-  const kstHour = nowKST.getUTCHours();
-  const kstMinute = nowKST.getUTCMinutes();
 
-  // KST 20:00 ±10분 범위가 아니면 종료
-  // (이 함수는 cron으로 주기적으로 호출되므로 시각 체크로 실제 발송 시점 제어)
-  const minutesFromTarget = (kstHour * 60 + kstMinute) - 20 * 60;
-  if (Math.abs(minutesFromTarget) > 10) {
-    return new Response(JSON.stringify({
-      message: "알림 시각 아님",
-      kstTime: `${String(kstHour).padStart(2, "0")}:${String(kstMinute).padStart(2, "0")}`,
-    }), { status: 200 });
+  // 취침시간 22시~06시 알림 차단
+  const kstHour = nowKST.getUTCHours();
+  if (kstHour >= 22 || kstHour < 6) {
+    return new Response(JSON.stringify({ message: "취침 시간대 알림 제외" }), { status: 200 });
   }
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // KST 기준 "내일" 날짜 범위 계산
-    const tomorrowKST = new Date(nowKST.getTime() + 24 * 60 * 60 * 1000);
-    const tomorrowStr = tomorrowKST.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // [변경] 오늘 경기 조회 (내일 → 오늘)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const todayStr = nowKST.toISOString().slice(0, 10);
+    const todayStartUTC = new Date(`${todayStr}T00:00:00+09:00`).toISOString();
+    const todayEndUTC   = new Date(`${todayStr}T23:59:59+09:00`).toISOString();
 
-    const tomorrowStartUTC = new Date(`${tomorrowStr}T00:00:00+09:00`).toISOString();
-    const tomorrowEndUTC = new Date(`${tomorrowStr}T23:59:59+09:00`).toISOString();
-
-    // 내일 경기 중 아직 결과 미확정(winner = null)인 것만
-    const { data: tomorrowGames } = await supabase
+    const { data: todayGames } = await supabase
       .from("games")
-      .select("id")
+      .select("id, vote_deadline")
       .is("winner", null)
-      .gte("start_time", tomorrowStartUTC)
-      .lte("start_time", tomorrowEndUTC);
+      .gte("start_time", todayStartUTC)
+      .lte("start_time", todayEndUTC)
+      .order("vote_deadline", { ascending: true }); // 첫 경기 마감 기준 정렬
 
-    if (!tomorrowGames || tomorrowGames.length === 0) {
-      return new Response(JSON.stringify({ message: "내일 경기 없음" }), { status: 200 });
+    if (!todayGames || todayGames.length === 0) {
+      return new Response(JSON.stringify({ message: "오늘 경기 없음" }), { status: 200 });
     }
 
-    const tomorrowGameIds = tomorrowGames.map((g: { id: number }) => g.id);
-    const gameCount = tomorrowGameIds.length;
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // [변경] 시각 체크: 20:00 고정 → 첫 경기 vote_deadline - 30분 ±10분
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const firstDeadline  = new Date(todayGames[0].vote_deadline);
+    const notifyAt       = new Date(firstDeadline.getTime() - 30 * 60 * 1000);
+    const diffMs         = Math.abs(nowUTC.getTime() - notifyAt.getTime());
 
-    // 알림 구독자 전체 (user_id 포함)
-    // push_subscriptions 테이블에 user_id 컬럼 필요
+    if (diffMs > 10 * 60 * 1000) {
+      return new Response(JSON.stringify({
+        message: "알림 시각 아님",
+        notifyAt: notifyAt.toISOString(),
+        now: nowUTC.toISOString(),
+      }), { status: 200 });
+    }
+
+    const todayGameIds = todayGames.map((g: { id: number }) => g.id);
+    const gameCount    = todayGameIds.length;
+
+    // 알림 구독자 전체 (no_weekend 포함)
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
-      .select("user_id, endpoint, p256dh, auth");
+      .select("user_id, endpoint, p256dh, auth, no_weekend");
 
     if (!subscriptions || subscriptions.length === 0) {
       return new Response(JSON.stringify({ message: "구독자 없음" }), { status: 200 });
     }
 
-    // 내일 경기에 이미 투표한 (user_id, game_id) 목록
+    // 오늘 경기에 이미 투표한 목록
     const { data: existingVotes } = await supabase
       .from("votes")
       .select("user_id, game_id")
-      .in("game_id", tomorrowGameIds);
+      .in("game_id", todayGameIds);
 
-    // 유저별 투표한 game_id set
     const votedMap: Record<string, Set<number>> = {};
     existingVotes?.forEach((v: { user_id: string; game_id: number }) => {
       if (!votedMap[v.user_id]) votedMap[v.user_id] = new Set();
       votedMap[v.user_id].add(v.game_id);
     });
 
+    // KST 기준 오늘 요일 (0=일, 6=토)
+    const kstDay     = nowKST.getUTCDay();
+    const isWeekend  = kstDay === 0 || kstDay === 6;
+
     let sent = 0;
     for (const sub of subscriptions) {
-      const votedSet = votedMap[sub.user_id] ?? new Set();
-      // 내일 경기 중 하나라도 투표 안 했으면 알림 발송
-      const hasUnvoted = tomorrowGameIds.some((id: number) => !votedSet.has(id));
+      // 주말 알림 off 설정한 구독자는 주말에 skip
+      if (isWeekend && sub.no_weekend) continue;
+
+      const votedSet   = votedMap[sub.user_id] ?? new Set();
+      const hasUnvoted = todayGameIds.some((id: number) => !votedSet.has(id));
       if (!hasUnvoted) continue;
 
-      const unvotedCount = tomorrowGameIds.filter((id: number) => !votedSet.has(id)).length;
+      const unvotedCount = todayGameIds.filter((id: number) => !votedSet.has(id)).length;
       const body = unvotedCount === gameCount
-        ? `내일 ${gameCount}경기 투표를 아직 안 했어요!`
-        : `내일 ${gameCount}경기 중 ${unvotedCount}경기 투표가 남았어요!`;
+        ? `오늘 ${gameCount}경기 투표를 아직 안 했어요!`
+        : `오늘 ${gameCount}경기 중 ${unvotedCount}경기 투표가 남았어요!`;
 
       const notifPayload = JSON.stringify({
         title: "🏀 원샷 NBA",
@@ -161,7 +172,7 @@ Deno.serve(async () => {
       success: true,
       sent,
       total: subscriptions.length,
-      tomorrowGames: gameCount,
+      todayGames: gameCount,
     }), { status: 200 });
 
   } catch (err) {
