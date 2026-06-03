@@ -100,6 +100,9 @@ export default function AppShell({ user, children }: Props) {
   // 랜덤 자동투표 설정
   const [randomAutoVote, setRandomAutoVote] = useState<boolean>(false);
 
+  // 배당 자동투표 설정 (랜덤 ON일 때만 활성)
+  const [oddsAutoVote, setOddsAutoVote] = useState<boolean>(false);
+
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
     const permission = Notification.permission;
@@ -172,6 +175,7 @@ export default function AppShell({ user, children }: Props) {
     setIsSubscribed(false);
     setWeekendOn(false);
     setRandomAutoVote(false);
+    setOddsAutoVote(false);
   };
 
   // 주말 알림 토글 → DB 저장
@@ -194,6 +198,20 @@ export default function AppShell({ user, children }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ random: next }),
     });
+  };
+
+  // 배당 자동투표 토글 → DB 저장 (랜덤 OFF시 같이 비활성)
+  const toggleOddsAutoVote = async () => {
+    if (!randomAutoVote) return;
+    const next = !oddsAutoVote;
+    setOddsAutoVote(next);
+    /* 배당 기능 활성화 시 아래 주석 해제
+    await fetch("/api/push/subscribe", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ odds: next }),
+    });
+    */
   };
 
   const navItems    = user.role === "admin" ? [...NAV_ITEMS, ADMIN_NAV] : NAV_ITEMS;
@@ -280,13 +298,27 @@ export default function AppShell({ user, children }: Props) {
                     </div>
                   </div>
 
-                  {/* 2행 우: 배당 (미구현 — 항상 비활성)
-                      활성화 시 odds-api.io 배당 참조하여 투표 처리 예정 */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 0 2px 8px", opacity: 0.3 }}>
+                  {/* 2행 우: 배당
+                      랜덤 ON → 흐리게 표시(opacity 0.6), OFF → 더 흐리게(0.25)
+                      ── 배당 기능 활성화 방법 ──────────────────────────────
+                      1) 아래 DISABLED_START ~ DISABLED_END 블록을 삭제
+                      2) ENABLED_START ~ ENABLED_END 블록의 주석 기호(//)를 제거
+                      ─────────────────────────────────────────────────── */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 0 2px 8px", opacity: randomAutoVote ? 0.6 : 0.25 }}>
                     <span style={{ fontSize: 11, color: "#888" }}>배당</span>
+                    {/* DISABLED_START */}
                     <div style={{ ...togOff, pointerEvents: "none" }}>
                       <div style={thumbOff} />
                     </div>
+                    {/* DISABLED_END */}
+                    {/* ENABLED_START
+                    <div
+                      style={{ ...(oddsAutoVote ? togOn : togOff), pointerEvents: randomAutoVote ? "auto" : "none" }}
+                      onClick={randomAutoVote ? toggleOddsAutoVote : undefined}
+                    >
+                      <div style={oddsAutoVote ? thumbOn : thumbOff} />
+                    </div>
+                    ENABLED_END */}
                   </div>
 
                 </div>
