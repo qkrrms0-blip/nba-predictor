@@ -1,14 +1,13 @@
 // public/sw.js
 
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
-  const data = event.data.json();
-  const title = data.title || "원샷 NBA";
+  // data 없어도 기본 알림 표시
+  const title = "🏀 원샷 NBA";
   const options = {
-    body: data.body || "",
+    body: "오늘 투표하셨나요?",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
-    data: { url: data.url || "/voting" },
+    data: { url: "/voting" },
     vibrate: [200, 100, 200],
   };
   event.waitUntil(self.registration.showNotification(title, options));
