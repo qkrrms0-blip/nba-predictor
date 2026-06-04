@@ -11,6 +11,8 @@ interface GameResult {
   id: number;
   home_team: string;
   away_team: string;
+  home_score?: number | null;
+  away_score?: number | null;
   start_time: string;
   round: string;
   winner: "home" | "away" | null;
@@ -478,8 +480,6 @@ export default function HistoryPage() {
         </div>
       ) : (
         gameResults.map((game) => {
-          const winnerTeam = game.winner === "home" ? game.home_team : game.away_team;
-          const winnerAbbr = winnerTeam.split(" ").slice(-1)[0];
           const homeAbbr = game.home_team.split(" ").slice(-1)[0];
           const awayAbbr = game.away_team.split(" ").slice(-1)[0];
 
@@ -507,25 +507,32 @@ export default function HistoryPage() {
                   </span>
                 </div>
 
-                {/* 중: 홈로고 팀명 VS 팀명 원정로고 */}
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                {/* 중: 홈로고 점수 VS 점수 원정로고 */}
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                   <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
-                    style={{ width: 22, height: 22, objectFit: "contain", flexShrink: 0 }}
+                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap" }}>{homeAbbr}</span>
+                  <span style={{
+                    fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
+                    color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)",
+                  }}>
+                    {game.home_score ?? "-"}
+                  </span>
                   <span style={{ fontSize: 12, color: "var(--text-muted)" }}>VS</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap" }}>{awayAbbr}</span>
+                  <span style={{
+                    fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
+                    color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)",
+                  }}>
+                    {game.away_score ?? "-"}
+                  </span>
                   <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
-                    style={{ width: 22, height: 22, objectFit: "contain", flexShrink: 0 }}
+                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
                 </div>
 
-                {/* 우: 완료뱃지 + 승리팀 */}
+                {/* 우: 완료뱃지 */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
                   <span className="badge badge-correct">완료</span>
-                  <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                    승리: <strong style={{ color: "var(--text)" }}>{winnerAbbr}</strong>
-                  </span>
                 </div>
 
               </div>
