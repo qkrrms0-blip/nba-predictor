@@ -104,6 +104,21 @@ export default function AppShell({ user, children }: Props) {
   const [oddsAutoVote, setOddsAutoVote] = useState<boolean>(false);
 
   useEffect(() => {
+    // DB에서 설정값 불러오기
+    supabase
+      .from("push_subscriptions")
+      .select("no_weekend, random_auto_vote")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setWeekendOn(!data.no_weekend);
+          setRandomAutoVote(data.random_auto_vote ?? false);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
 
     // 서비스워커 등록
