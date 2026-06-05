@@ -458,36 +458,43 @@ export default function VotingPage() {
                   <img
                     src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
                     style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0,
-                      filter: game.winner && game.winner !== "home"
-                        ? "drop-shadow(0 1px 6px rgba(0,0,0,0.5)) grayscale(1) opacity(0.35)"
-                        : "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
+                      filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))",
+                      opacity: game.winner && game.winner !== "home" ? 0.35 : 1 }}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
                   />
                 </div>
 
-                {/* 가운데 VS 메타블록: 시간 / VS or 결과 / 마감 */}
+                {/* 가운데 VS 메타블록: 시간 / 점수or VS / 마감 */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, minWidth: 72 }}>
                   <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                     {format(new Date(game.start_time), "HH:mm")}
                   </span>
                   {game.winner ? (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", lineHeight: 1.2, textAlign: "center" }}>
-                      {game.winner === "home" ? game.home_team : game.away_team}
-                      <br />
-                      <span style={{ fontSize: 9, fontWeight: 500, color: "var(--text-muted)" }}>승리</span>
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
+                        color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
+                        {game.home_score ?? "-"}
+                      </span>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>:</span>
+                      <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
+                        color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
+                        {game.away_score ?? "-"}
+                      </span>
+                    </div>
                   ) : (
                     <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--text-muted)", lineHeight: 1.1 }}>
                       VS
                     </span>
                   )}
-                  {game.vote_deadline && (
+                  {game.winner ? (
+                    <span style={{ fontSize: 10, color: "var(--text-muted)" }}>최종</span>
+                  ) : game.vote_deadline ? (
                     closed
                       ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>마감됨</span>
                       : <span style={{ fontSize: 10, color: "#ef4444", whiteSpace: "nowrap" }}>
                           마감 {format(new Date(game.vote_deadline), "M/d HH:mm")}
                         </span>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* 원정팀: 로고(VS쪽) | 버튼(바깥) */}
@@ -495,9 +502,8 @@ export default function VotingPage() {
                   <img
                     src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
                     style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0,
-                      filter: game.winner && game.winner !== "away"
-                        ? "drop-shadow(0 1px 6px rgba(0,0,0,0.5)) grayscale(1) opacity(0.35)"
-                        : "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
+                      filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))",
+                      opacity: game.winner && game.winner !== "away" ? 0.35 : 1 }}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
                   />
                   <button
