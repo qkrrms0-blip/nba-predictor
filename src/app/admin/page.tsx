@@ -465,7 +465,7 @@ export default function AdminPage() {
                     <label className="form-label">시작일</label>
                     <DatePicker
                       selected={new Date(espnStartDate)}
-                      onChange={(d) => d && setEspnStartDate(format(d, "yyyy-MM-dd"))}
+                      onChange={(d: Date | null) => d && setEspnStartDate(format(d, "yyyy-MM-dd"))}
                       dateFormat="yyyy.MM.dd"
                       locale={ko}
                       className="text-input"
@@ -477,7 +477,7 @@ export default function AdminPage() {
                     <label className="form-label">종료일</label>
                     <DatePicker
                       selected={new Date(espnEndDate)}
-                      onChange={(d) => d && setEspnEndDate(format(d, "yyyy-MM-dd"))}
+                      onChange={(d: Date | null) => d && setEspnEndDate(format(d, "yyyy-MM-dd"))}
                       dateFormat="yyyy.MM.dd"
                       locale={ko}
                       className="text-input"
@@ -590,7 +590,7 @@ export default function AdminPage() {
                           <label className="form-label">{field === "start_time" ? "경기 시작시간" : "투표 마감시간"}</label>
                           <DatePicker
                             selected={newGame[field]}
-                            onChange={(d) => d && setNewGame({ ...newGame, [field]: d })}
+                            onChange={(d: Date | null) => d && setNewGame({ ...newGame, [field]: d })}
                             showTimeSelect
                             timeFormat="aa h:mm"
                             timeIntervals={5}
