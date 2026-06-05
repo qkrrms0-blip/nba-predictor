@@ -210,18 +210,19 @@ export default function VotingPage() {
 
     // 투표 현황은 loadOverallVoteCount에서 4일치 합산으로 관리
 
-    // 마감된 경기 전체 투표 현황 (퍼센트 바 + 적중자)
-    const deadlinePassedIds = gamesData
-      .filter((g: Game) => !votableIds.has(g.id))
+    // 마감됐거나 정산된 경기 전체 투표 현황 (퍼센트 바 + 적중자)
+    // 마감 전 정산된 경우도 포함
+    const closedIds = gamesData
+      .filter((g: any) => !votableIds.has(g.id) || g.winner)
       .map((g: Game) => g.id);
 
     let voteStats: Record<number, { home: number; away: number }> = {};
     let correctVotersMap: Record<number, { name: string; points: number }[]> = {};
 
-    if (deadlinePassedIds.length > 0) {
+    if (closedIds.length > 0) {
       const { data: allVotes } = await supabase.from("votes")
         .select("game_id, voted_team, is_correct, points, user_id")
-        .in("game_id", deadlinePassedIds);
+        .in("game_id", closedIds);
 
       const { data: allUsers } = await supabase.from("users").select("id, name");
       const userMap: Record<string, string> = {};
