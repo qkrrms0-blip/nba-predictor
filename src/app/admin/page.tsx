@@ -169,6 +169,8 @@ export default function AdminPage() {
   const [gradeLoading, setGradeLoading] = useState(false);
   // 경기 추가 폼 접기/펼치기 (기본: 접힘)
   const [addGameOpen, setAddGameOpen] = useState(false);
+  // 채점 완료 경기 섹션 접기/펼치기 (기본: 접힘)
+  const [completedSectionOpen, setCompletedSectionOpen] = useState(false);
 
   // 경기 목록 필터 - 월 선택 + 날짜 선택
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "MM"));
@@ -440,31 +442,21 @@ export default function AdminPage() {
       const diff = mouseStart.x - e.clientX;
       if (Math.abs(diff) > 40) diff > 0 ? gameTabGoNext() : gameTabGoPrev();
     };
-    const onWheel = (e: WheelEvent) => {
-      if (gameTabWheelCooldown.current) return;
-      if (Math.abs(e.deltaY) < 30) return;
-      gameTabWheelCooldown.current = true;
-      e.deltaY > 0 ? gameTabGoNext() : gameTabGoPrev();
-      setTimeout(() => { gameTabWheelCooldown.current = false; }, 600);
-    };
     window.addEventListener("touchstart", onTouchStart);
     window.addEventListener("touchend", onTouchEnd);
     window.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mouseup", onMouseUp);
-    window.addEventListener("wheel", onWheel, { passive: true });
     return () => {
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("wheel", onWheel);
     };
   }, [tab, gameTabGoNext, gameTabGoPrev]);
 
   // 경기탭 내부 페이지 (0: 자동등록+채점대기, 1: 경기추가+채점완료)
   const [gameTabPage, setGameTabPage] = useState(0);
   const gameTabTotalPages = 2;
-  const gameTabWheelCooldown = useRef(false);
 
   // 미채점 경기 (채점 대기 중) - 별도 로드
   const [pendingGames, setPendingGames] = useState<Game[]>([]);
@@ -559,12 +551,17 @@ export default function AdminPage() {
 
                 {/* 현재 등록된 경기 수(위너없음) + 마지막 실행 날짜 뱃지 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                    현재 등록된 경기{" "}
-                    <strong style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
-                      {noWinnerCount}
-                    </strong>
-                    경기
+                  <span style={{
+                    border: "1.5px solid #ff8c00",
+                    borderRadius: 20,
+                    padding: "2px 10px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "#ff8c00",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}>
+                    <strong style={{ fontVariantNumeric: "tabular-nums" }}>{noWinnerCount}</strong>경기 남음
                   </span>
                   {espnLastSync && (
                     <span style={{
@@ -606,24 +603,32 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* 채점 대기 헤더 구분선 */}
+              {/* 채점 대기 박스 */}
               <div style={{
-                display: "flex", alignItems: "center", gap: 8, margin: "4px 0 8px",
+                border: "1px solid var(--border)", borderRadius: 10,
+                background: "var(--surface)", marginBottom: 12,
               }}>
-                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                  채점 대기 {pendingGames.length > 0 ? `(${pendingGames.length}경기)` : ""}
-                </span>
-                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-              </div>
-
+                <div style={{
+                  fontWeight: 700, fontSize: 14, padding: "10px 14px",
+                  borderBottom: "1px solid var(--border)",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <span>채점 대기</span>
+                  {pendingGames.length > 0 && (
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
+                      {pendingGames.length}경기
+                    </span>
+                  )}
+                </div>
+                <div style={{ padding: "8px 0" }}>
               {/* 채점 대기 경기 */}
-              {pendingGames.length > 0 && (
+              {pendingGames.length > 0 ? (
                 <>
                   {pendingGames.map((game) => {
                     const pts = ROUND_POINTS[game.round];
                     return (
-                      <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
+                      <div key={game.id} style={{ padding: "4px 10px" }}>
+                        <div className="card" style={{ padding: "8px 10px", marginBottom: 0 }}>
                         <div style={{ display: "flex", alignItems: "center" }}>
 
                           {/* 좌: 고정폭 — 라운드+pt 한 줄, 아래 날짜시간 */}
@@ -669,16 +674,18 @@ export default function AdminPage() {
                           </div>
 
                         </div>
+                        </div>
                       </div>
                     );
                   })}
                 </>
-              )}
-              {pendingGames.length === 0 && (
-                <div style={{ textAlign: "center", padding: "16px 0", fontSize: 13, color: "var(--text-muted)" }}>
+              ) : (
+                <div style={{ textAlign: "center", padding: "14px 0", fontSize: 13, color: "var(--text-muted)" }}>
                   채점 대기 경기 없음
                 </div>
               )}
+                </div>
+              </div>
 
               </> /* 1페이지 끝 */}
 
@@ -774,16 +781,26 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* 채점 완료 경기 헤더 구분선 */}
+              {/* 채점 완료 경기 - 접기/펼치기 박스 */}
               <div style={{
-                display: "flex", alignItems: "center", gap: 8, margin: "4px 0 8px",
+                border: "1px solid var(--border)", borderRadius: 10,
+                background: "var(--surface)", marginBottom: 12,
               }}>
-                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                  채점 완료 경기
-                </span>
-                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-              </div>
+                <div
+                  onClick={() => setCompletedSectionOpen((v) => !v)}
+                  style={{
+                    fontWeight: 700, fontSize: 14, padding: "10px 14px",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    cursor: "pointer", userSelect: "none",
+                    borderBottom: completedSectionOpen ? "1px solid var(--border)" : "none",
+                  }}>
+                  <span>채점 완료 경기</span>
+                  <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
+                    {completedSectionOpen ? "−" : "+"}
+                  </span>
+                </div>
+
+              {completedSectionOpen && <div style={{ padding: "8px 0" }}>
 
               {/* history 스타일 필터 바 */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 8, overflowX: "auto", scrollbarWidth: "none" }}>
@@ -1005,6 +1022,9 @@ export default function AdminPage() {
                   </div>
                 </>
               )}
+
+              </div> /* completedSectionOpen 내용 끝 */}
+              </div> /* 채점완료 박스 끝 */
 
               </> /* 2페이지 끝 */}
 
