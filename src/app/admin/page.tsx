@@ -5,7 +5,7 @@
 // .datepicker-full input { width: 100%; }
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -167,8 +167,6 @@ export default function AdminPage() {
   const [espnResult, setEspnResult] = useState<string>("");
   const [espnLastSync, setEspnLastSync] = useState<string>("");
   const [gradeLoading, setGradeLoading] = useState(false);
-  // 채점 완료 경기 섹션 접기/펼치기 (기본: 접힘)
-  const [completedSectionOpen, setCompletedSectionOpen] = useState(false);
   // 경기 추가 폼 접기/펼치기 (기본: 접힘)
   const [addGameOpen, setAddGameOpen] = useState(false);
 
@@ -422,8 +420,55 @@ export default function AdminPage() {
     if (!error) { showToast("✅ 새 시즌 시작!"); loadData(); }
   };
 
+  // 경기탭 페이지 이동 — 휠·터치·마우스 드래그
+  const gameTabGoNext = useCallback(() => setGameTabPage((p) => Math.min(p + 1, gameTabTotalPages - 1)), []);
+  const gameTabGoPrev = useCallback(() => setGameTabPage((p) => Math.max(p - 1, 0)), []);
+
+  useEffect(() => {
+    if (tab !== "games") return;
+    const touchStart = { x: 0 };
+    const mouseStart = { x: 0, down: false };
+    const onTouchStart = (e: TouchEvent) => { touchStart.x = e.touches[0].clientX; };
+    const onTouchEnd = (e: TouchEvent) => {
+      const diff = touchStart.x - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 40) diff > 0 ? gameTabGoNext() : gameTabGoPrev();
+    };
+    const onMouseDown = (e: MouseEvent) => { mouseStart.x = e.clientX; mouseStart.down = true; };
+    const onMouseUp = (e: MouseEvent) => {
+      if (!mouseStart.down) return;
+      mouseStart.down = false;
+      const diff = mouseStart.x - e.clientX;
+      if (Math.abs(diff) > 40) diff > 0 ? gameTabGoNext() : gameTabGoPrev();
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (gameTabWheelCooldown.current) return;
+      if (Math.abs(e.deltaY) < 30) return;
+      gameTabWheelCooldown.current = true;
+      e.deltaY > 0 ? gameTabGoNext() : gameTabGoPrev();
+      setTimeout(() => { gameTabWheelCooldown.current = false; }, 600);
+    };
+    window.addEventListener("touchstart", onTouchStart);
+    window.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("wheel", onWheel);
+    };
+  }, [tab, gameTabGoNext, gameTabGoPrev]);
+
+  // 경기탭 내부 페이지 (0: 자동등록+채점대기, 1: 경기추가+채점완료)
+  const [gameTabPage, setGameTabPage] = useState(0);
+  const gameTabTotalPages = 2;
+  const gameTabWheelCooldown = useRef(false);
+
   // 미채점 경기 (채점 대기 중) - 별도 로드
   const [pendingGames, setPendingGames] = useState<Game[]>([]);
+  const [noWinnerCount, setNoWinnerCount] = useState<number>(0);
   useEffect(() => {
     if (tab !== "games") return;
     // KST(UTC+9) 기준 오늘 자정까지 (미래 경기 제외)
@@ -432,12 +477,13 @@ export default function AdminPage() {
     const todayEnd = new Date(kstDateStr + "T23:59:59+09:00");
     supabase.from("games").select("*").is("winner", null).lte("start_time", todayEnd.toISOString()).order("start_time", { ascending: true })
       .then(({ data }) => setPendingGames(data || []));
+    // 위너 없는 전체 등록 경기 수 (미래 포함)
+    supabase.from("games").select("id", { count: "exact", head: true }).is("winner", null)
+      .then(({ count }) => setNoWinnerCount(count || 0));
   }, [tab, allGames]);
 
   return (
     <>
-      <h1 className="section-title">관리</h1>
-
       <div className="admin-tabs">
         {(["games", "users", "seasons"] as AdminTab[]).map((t) => (
           <button key={t} className={`admin-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
@@ -453,6 +499,30 @@ export default function AdminPage() {
           {/* ── 경기 관리 ── */}
           {tab === "games" && (
             <>
+              {/* 경기탭 페이지 네비게이터 */}
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, padding: "4px 0 10px" }}>
+                {Array.from({ length: gameTabTotalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setGameTabPage(i)}
+                    style={{
+                      width: i === gameTabPage ? 7 : 5,
+                      height: i === gameTabPage ? 7 : 5,
+                      borderRadius: "50%",
+                      background: i === gameTabPage ? "var(--text)" : "rgba(150,150,150,0.5)",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      flexShrink: 0,
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* ── 1페이지: 자동등록 + 채점대기 ── */}
+              {gameTabPage === 0 && <>
+
               {/* ESPN 경기 가져오기 */}
               <div className="card" style={{ marginBottom: 12, overflow: "visible" }}>
                 <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
@@ -487,11 +557,15 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* 권장 문구 + 마지막 실행 날짜 뱃지 */}
+                {/* 현재 등록된 경기 수(위너없음) + 마지막 실행 날짜 뱃지 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
-                    * 월 단위 등록을 권장합니다.
-                  </p>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                    현재 등록된 경기{" "}
+                    <strong style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+                      {noWinnerCount}
+                    </strong>
+                    경기
+                  </span>
                   {espnLastSync && (
                     <span style={{
                       border: "1.5px solid #39ff6a",
@@ -516,7 +590,7 @@ export default function AdminPage() {
                   </button>
                   <button className="btn-primary" style={{ flex: 1, background: "var(--accent2)" }}
                     onClick={gradeGamesAuto} disabled={gradeLoading}>
-                    {gradeLoading ? "채점 중..." : "⚡ 자동채점 실행"}
+                    {gradeLoading ? "채점 중..." : "자동채점 실행"}
                   </button>
                 </div>
 
@@ -531,6 +605,85 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
+
+              {/* 채점 대기 헤더 구분선 */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8, margin: "4px 0 8px",
+              }}>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                  채점 대기 {pendingGames.length > 0 ? `(${pendingGames.length}경기)` : ""}
+                </span>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              </div>
+
+              {/* 채점 대기 경기 */}
+              {pendingGames.length > 0 && (
+                <>
+                  {pendingGames.map((game) => {
+                    const pts = ROUND_POINTS[game.round];
+                    return (
+                      <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
+                        <div style={{ display: "flex", alignItems: "center" }}>
+
+                          {/* 좌: 고정폭 — 라운드+pt 한 줄, 아래 날짜시간 */}
+                          <div style={{ width: 110, flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                            <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                              <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                {game.round}
+                              </span>
+                              {pts && (
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                                  {pts}pt
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                              {format(new Date(game.start_time), "M/d HH:mm")}
+                            </span>
+                          </div>
+
+                          {/* 중: 항상 같은 위치 — 약어 vs 약어 */}
+                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
+                            <span>{getTeamAbbr(game.home_team)}</span>
+                            <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
+                            <span>{getTeamAbbr(game.away_team)}</span>
+                          </div>
+
+                          {/* 우: 삭제 / 홈약어 원정약어 */}
+                          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                            <button onClick={() => deleteGame(game.id)}
+                              style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
+                              삭제
+                            </button>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button onClick={() => gradeGame(game.id, "home")}
+                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.1)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)", whiteSpace: "nowrap" }}>
+                                {getTeamAbbr(game.home_team)}
+                              </button>
+                              <button onClick={() => gradeGame(game.id, "away")}
+                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.3)", whiteSpace: "nowrap" }}>
+                                {getTeamAbbr(game.away_team)}
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+              {pendingGames.length === 0 && (
+                <div style={{ textAlign: "center", padding: "16px 0", fontSize: 13, color: "var(--text-muted)" }}>
+                  채점 대기 경기 없음
+                </div>
+              )}
+
+              </> /* 1페이지 끝 */}
+
+              {/* ── 2페이지: 경기추가 + 채점완료 ── */}
+              {gameTabPage === 1 && <>
 
               {/* 경기 추가 폼 - 접기/펼치기 */}
               <div style={{
@@ -553,7 +706,7 @@ export default function AdminPage() {
 
                 {addGameOpen && (
                   <div style={{ padding: "14px 16px" }}>
-                    {/* 홈팀 / 원정팀 - 모바일에서 세로, PC에서 가로 */}
+                    {/* 홈팀 / 원정팀 */}
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
                         <label className="form-label">홈팀</label>
@@ -621,84 +774,16 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* 채점 대기 경기 */}
-              {pendingGames.length > 0 && (
-                <>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 4 }}>
-                    채점 대기 ({pendingGames.length}경기)
-                  </div>
-                  {pendingGames.map((game) => {
-                    const pts = ROUND_POINTS[game.round];
-                    return (
-                      <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
-                        <div style={{ display: "flex", alignItems: "center" }}>
-
-                          {/* 좌: 고정폭 — 라운드+pt 한 줄, 아래 날짜시간 */}
-                          <div style={{ width: 110, flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-                            <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
-                              <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                {game.round}
-                              </span>
-                              {pts && (
-                                <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
-                                  {pts}pt
-                                </span>
-                              )}
-                            </div>
-                            <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                              {format(new Date(game.start_time), "M/d HH:mm")}
-                            </span>
-                          </div>
-
-                          {/* 중: 항상 같은 위치 — 약어 vs 약어 */}
-                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
-                            <span>{getTeamAbbr(game.home_team)}</span>
-                            <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
-                            <span>{getTeamAbbr(game.away_team)}</span>
-                          </div>
-
-                          {/* 우: 삭제 / 홈약어 원정약어 */}
-                          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                            <button onClick={() => deleteGame(game.id)}
-                              style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
-                              삭제
-                            </button>
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <button onClick={() => gradeGame(game.id, "home")}
-                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.1)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)", whiteSpace: "nowrap" }}>
-                                {getTeamAbbr(game.home_team)}
-                              </button>
-                              <button onClick={() => gradeGame(game.id, "away")}
-                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.3)", whiteSpace: "nowrap" }}>
-                                {getTeamAbbr(game.away_team)}
-                              </button>
-                            </div>
-                          </div>
-
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-
-              {/* 채점 완료 경기 - 월/일 필터 */}
-              <div
-                onClick={() => setCompletedSectionOpen((v) => !v)}
-                style={{
-                  fontWeight: 700, fontSize: 14, marginTop: 8, marginBottom: 4,
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  cursor: "pointer", userSelect: "none",
-                  padding: "10px 14px", borderRadius: 10,
-                  border: "1px solid var(--border)", background: "var(--surface)",
-                }}>
-                <span>채점 완료 경기</span>
-                <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
-                  {completedSectionOpen ? "−" : "+"}
+              {/* 채점 완료 경기 헤더 구분선 */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8, margin: "4px 0 8px",
+              }}>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                  채점 완료 경기
                 </span>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
               </div>
-
-              {completedSectionOpen && <>
 
               {/* history 스타일 필터 바 */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 8, overflowX: "auto", scrollbarWidth: "none" }}>
@@ -920,7 +1005,8 @@ export default function AdminPage() {
                   </div>
                 </>
               )}
-              </>}
+
+              </> /* 2페이지 끝 */}
 
             </>
           )}
