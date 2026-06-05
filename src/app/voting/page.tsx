@@ -535,8 +535,8 @@ export default function VotingPage() {
                 </div>
               </div>
 
-              {/* 마감 후: 퍼센트 바 */}
-              {closed && totalVotes > 0 && (
+              {/* 마감 후 또는 정산된 경기: 퍼센트 바 */}
+              {(closed || game.winner) && totalVotes > 0 && (
                 <div className="vote-stats" style={{ marginTop: 8 }}>
                   <span className="vote-pct">{homePct}%</span>
                   <div className="vote-bar">
