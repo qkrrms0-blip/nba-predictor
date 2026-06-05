@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
 import { User, Season, Round, ROUND_POINTS } from "@/lib/types";
+import { getTeamLogoUrl } from "@/lib/nba-api";
 
 interface Game {
   id: number;
@@ -151,6 +152,23 @@ export default function AdminPage() {
 
   // 채점 변경용
   const [regradeGameId, setRegradeGameId] = useState<number | null>(null);
+
+  // 커스텀 시간 picker 상태 (오전/오후, 시, 분)
+  function parseDatetimeLocal(val: string) {
+    // val: "yyyy-MM-ddTHH:mm"
+    const [datePart, timePart] = val.split("T");
+    const [hStr, mStr] = (timePart || "08:00").split(":");
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    const ampm = h < 12 ? "AM" : "PM";
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return { datePart, ampm, hour: h12, minute: m };
+  }
+  function buildDatetimeLocal(datePart: string, ampm: string, hour: number, minute: number) {
+    let h24 = hour % 12;
+    if (ampm === "PM") h24 += 12;
+    return `${datePart}T${String(h24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }
 
   // ESPN 연동
   const [espnStartDate, setEspnStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -563,21 +581,47 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* 시작시간 / 마감시간 2열 */}
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
-                        <label className="form-label">경기 시작시간</label>
-                        <input type="datetime-local" className="text-input"
-                          value={newGame.start_time}
-                          onChange={(e) => setNewGame({ ...newGame, start_time: e.target.value })} />
-                      </div>
-                      <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
-                        <label className="form-label">투표 마감시간</label>
-                        <input type="datetime-local" className="text-input"
-                          value={newGame.vote_deadline}
-                          onChange={(e) => setNewGame({ ...newGame, vote_deadline: e.target.value })} />
-                      </div>
-                    </div>
+                    {/* 시작시간 / 마감시간 */}
+                    {(["start_time", "vote_deadline"] as const).map((field) => {
+                      const label = field === "start_time" ? "경기 시작시간" : "투표 마감시간";
+                      const { datePart, ampm, hour, minute } = parseDatetimeLocal(newGame[field]);
+                      const setField = (dp: string, ap: string, h: number, m: number) =>
+                        setNewGame({ ...newGame, [field]: buildDatetimeLocal(dp, ap, h, m) });
+                      return (
+                        <div key={field} className="form-group">
+                          <label className="form-label">{label}</label>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            {/* 날짜 */}
+                            <input type="date" className="text-input" style={{ flex: 2, minWidth: 0 }}
+                              value={datePart}
+                              onChange={(e) => setField(e.target.value, ampm, hour, minute)} />
+                            {/* 오전/오후 */}
+                            <select className="filter-select" style={{ flex: 1, minWidth: 0 }}
+                              value={ampm}
+                              onChange={(e) => setField(datePart, e.target.value, hour, minute)}>
+                              <option value="AM">오전</option>
+                              <option value="PM">오후</option>
+                            </select>
+                            {/* 시 */}
+                            <select className="filter-select" style={{ flex: 1, minWidth: 0 }}
+                              value={hour}
+                              onChange={(e) => setField(datePart, ampm, Number(e.target.value), minute)}>
+                              {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                                <option key={h} value={h}>{h}시</option>
+                              ))}
+                            </select>
+                            {/* 분 */}
+                            <select className="filter-select" style={{ flex: 1, minWidth: 0 }}
+                              value={minute}
+                              onChange={(e) => setField(datePart, ampm, hour, Number(e.target.value))}>
+                              {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                                <option key={m} value={m}>{String(m).padStart(2, "0")}분</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      );
+                    })}
 
                     {/* 라운드 */}
                     <div className="form-group">
@@ -602,34 +646,82 @@ export default function AdminPage() {
                   <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 4 }}>
                     ⏳ 채점 대기 ({pendingGames.length}경기)
                   </div>
-                  {pendingGames.map((game) => (
-                    <div key={game.id} className="card">
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                          {format(new Date(game.start_time), "M/d HH:mm")} · {game.round}
-                        </span>
-                        <button onClick={() => deleteGame(game.id)}
-                          style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 12, cursor: "pointer" }}>
-                          삭제
-                        </button>
-                      </div>
-                      <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                        {getTeamKo(game.home_team)} ({getTeamAbbr(game.home_team)}) vs {getTeamKo(game.away_team)} ({getTeamAbbr(game.away_team)})
-                      </div>
-                      {regradeGameId !== game.id ? (
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button className="action-btn btn-approve" style={{ flex: 1 }}
-                            onClick={() => gradeGame(game.id, "home")}>
-                            {getTeamAbbr(game.home_team)} 승
-                          </button>
-                          <button className="action-btn" style={{ flex: 1, background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.2)" }}
-                            onClick={() => gradeGame(game.id, "away")}>
-                            {getTeamAbbr(game.away_team)} 승
-                          </button>
+                  {pendingGames.map((game) => {
+                    const isRegular = !ROUND_POINTS[game.round];
+                    const pts = ROUND_POINTS[game.round];
+                    return (
+                      <div key={game.id} className="game-card-compact">
+                        {/* 투표페이지와 동일한 팀 로고 레이아웃 */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+
+                          {/* 왼쪽: 라운드/포인트 */}
+                          <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {!isRegular && (
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                                <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>
+                                  {game.round.replace(" ", "\n")}
+                                </span>
+                                {pts && (
+                                  <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                                    {pts}pt
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 홈팀: 삭제+승버튼(바깥) | 로고(VS쪽) */}
+                          <div style={{ flex: 1, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                              <button onClick={() => deleteGame(game.id)}
+                                style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                삭제
+                              </button>
+                              <button
+                                onClick={() => gradeGame(game.id, "home")}
+                                style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid rgba(34,197,94,0.5)", background: "rgba(34,197,94,0.1)", color: "var(--green)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                                승
+                              </button>
+                            </div>
+                            <img
+                              src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
+                              style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0, filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
+                              onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                            />
+                          </div>
+
+                          {/* 가운데 VS 메타블록 */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, minWidth: 72 }}>
+                            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                              {format(new Date(game.start_time), "M/d HH:mm")}
+                            </span>
+                            <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--text-muted)", lineHeight: 1.1 }}>
+                              VS
+                            </span>
+                            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>채점 대기</span>
+                          </div>
+
+                          {/* 원정팀: 로고(VS쪽) | 승버튼(바깥) */}
+                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 6 }}>
+                            <img
+                              src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
+                              style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0, filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
+                              onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                            />
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                              {/* 삭제 자리 맞춤용 빈 공간 */}
+                              <div style={{ height: 22 }} />
+                              <button
+                                onClick={() => gradeGame(game.id, "away")}
+                                style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid rgba(59,130,246,0.5)", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                                승
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      ) : null}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </>
               )}
 
@@ -683,9 +775,9 @@ export default function AdminPage() {
                 })}
                 <button onClick={() => setCalendarOpen(!calendarOpen)}
                   style={{ marginLeft: "auto", flexShrink: 0, width: 32, height: 32, borderRadius: 8,
-                    border: "1px solid var(--border)",
-                    background: calendarOpen ? "var(--accent)" : "var(--surface2)",
-                    color: calendarOpen ? "#fff" : "var(--text-muted)",
+                    border: "1.5px solid var(--accent)",
+                    background: calendarOpen ? "var(--accent)" : "rgba(99,102,241,0.15)",
+                    color: calendarOpen ? "#fff" : "var(--accent)",
                     cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   📅
                 </button>
