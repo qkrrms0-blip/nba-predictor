@@ -403,7 +403,7 @@ export default function VotingPage() {
                       width: i === pageIndex ? 7 : 5,
                       height: i === pageIndex ? 7 : 5,
                       borderRadius: "50%",
-                      background: i === pageIndex ? "var(--text)" : "var(--border)",
+                      background: i === pageIndex ? "var(--text)" : "rgba(150,150,150,0.5)",
                       border: "none",
                       padding: 0,
                       cursor: "pointer",
