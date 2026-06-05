@@ -398,6 +398,59 @@ export default function AdminPage() {
     await gradeGame(gameId, winner);
   };
 
+  // 유저 삭제 확인 모달
+  const [deleteUserModal, setDeleteUserModal] = useState<{ id: string; name: string } | null>(null);
+  const [deleteUserInput, setDeleteUserInput] = useState("");
+
+  const deleteUserConfirmed = async () => {
+    if (!deleteUserModal) return;
+    const { error } = await supabase.from("users").delete().eq("id", deleteUserModal.id);
+    if (!error) { showToast("🗑️ 멤버 삭제 완료"); setDeleteUserModal(null); setDeleteUserInput(""); loadData(); }
+    else showToast("❌ 삭제 오류: " + error.message);
+  };
+
+  // 유저 팀별 적중률 모달
+  const [statsModal, setStatsModal] = useState<{ id: string; name: string } | null>(null);
+  const [statsSeasonType, setStatsSeasonType] = useState<"regular" | "post">("post");
+  const [statsData, setStatsData] = useState<{ team: string; total: number; correct: number; pct: number }[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  const loadUserStats = useCallback(async (userId: string, seasonType: "regular" | "post") => {
+    setStatsLoading(true);
+    const { data, error } = await supabase
+      .from("votes")
+      .select("voted_team, is_correct, games(home_team, away_team, season_type, winner)")
+      .eq("user_id", userId);
+
+    if (error || !data) { setStatsLoading(false); return; }
+
+    // 채점 완료된 것만, season_type 필터
+    const filtered = data.filter((v: any) =>
+      v.games?.season_type === seasonType && v.is_correct !== null
+    );
+
+    // 팀별 집계
+    const teamMap: Record<string, { total: number; correct: number }> = {};
+    filtered.forEach((v: any) => {
+      const team = v.voted_team === "home" ? v.games.home_team : v.games.away_team;
+      if (!teamMap[team]) teamMap[team] = { total: 0, correct: 0 };
+      teamMap[team].total++;
+      if (v.is_correct) teamMap[team].correct++;
+    });
+
+    const result = Object.entries(teamMap)
+      .map(([team, s]) => ({ team, total: s.total, correct: s.correct, pct: Math.round(s.correct / s.total * 100) }))
+      .filter(d => d.total >= 2) // 2경기 이상만
+      .sort((a, b) => b.pct - a.pct || b.total - a.total);
+
+    setStatsData(result);
+    setStatsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (statsModal) loadUserStats(statsModal.id, statsSeasonType);
+  }, [statsModal, statsSeasonType, loadUserStats]);
+
   const endSeason = async (seasonId: number) => {
     // 미정산(winner=null) 경기가 있으면 종료 불가
     const { data: unsettled } = await supabase
@@ -1054,7 +1107,13 @@ export default function AdminPage() {
               {users.map((user) => (
                 <div key={user.id} className="admin-user-row">
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{user.name}</div>
+                    <div
+                      style={{ fontWeight: 600, fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
+                      onClick={() => { setStatsModal({ id: user.id, name: user.name }); setStatsSeasonType("post"); }}
+                    >
+                      {user.name}
+                      <span style={{ fontSize: 10, color: "var(--accent)", opacity: 0.7 }}>▸</span>
+                    </div>
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{user.email}</div>
                     <div style={{ fontSize: 11, marginTop: 2 }}>
                       {user.approved
@@ -1079,14 +1138,121 @@ export default function AdminPage() {
                     {!user.approved ? (
                       <>
                         <button className="action-btn btn-approve" onClick={() => approveUser(user.id, true)}>승인</button>
-                        <button className="action-btn btn-reject" onClick={() => approveUser(user.id, false)}>거절</button>
+                        <button className="action-btn btn-reject" onClick={() => { setDeleteUserModal({ id: user.id, name: user.name }); setDeleteUserInput(""); }}>삭제</button>
                       </>
                     ) : (
-                      <button className="action-btn btn-reject" onClick={() => approveUser(user.id, false)}>승인취소</button>
+                      <button className="action-btn btn-reject" onClick={() => { setDeleteUserModal({ id: user.id, name: user.name }); setDeleteUserInput(""); }}>삭제</button>
                     )}
                   </div>
                 </div>
               ))}
+
+              {/* 유저 삭제 확인 모달 */}
+              {deleteUserModal && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "24px 20px", width: "100%", maxWidth: 320 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>⚠️ 멤버 삭제</div>
+                    <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14 }}>
+                      <strong style={{ color: "var(--text)" }}>{deleteUserModal.name}</strong> 을(를) 삭제합니다.<br />
+                      확인을 위해 <strong style={{ color: "#ef4444" }}>삭제</strong>를 입력하세요.
+                    </p>
+                    <input
+                      type="text"
+                      className="text-input"
+                      placeholder="삭제"
+                      value={deleteUserInput}
+                      onChange={(e) => setDeleteUserInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && deleteUserInput === "삭제" && deleteUserConfirmed()}
+                      style={{ width: "100%", marginBottom: 12, fontSize: 14 }}
+                      autoFocus
+                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { setDeleteUserModal(null); setDeleteUserInput(""); }}
+                        style={{ flex: 1, padding: "8px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>
+                        취소
+                      </button>
+                      <button
+                        onClick={() => deleteUserInput === "삭제" ? deleteUserConfirmed() : showToast("⚠️ '삭제'를 정확히 입력해주세요.")}
+                        style={{ flex: 1, padding: "8px", borderRadius: 8, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 유저 팀별 적중률 모달 */}
+              {statsModal && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+                  onClick={() => setStatsModal(null)}>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 16px", width: "100%", maxWidth: 360, maxHeight: "80vh", overflowY: "auto" }}
+                    onClick={(e) => e.stopPropagation()}>
+
+                    {/* 헤더 */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{statsModal.name}의 팀별 적중률</div>
+                      <button onClick={() => setStatsModal(null)}
+                        style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+                    </div>
+
+                    {/* 정규 / 포스트 탭 */}
+                    <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", marginBottom: 16 }}>
+                      {(["post", "regular"] as const).map((type) => (
+                        <button key={type}
+                          onClick={() => setStatsSeasonType(type)}
+                          style={{ flex: 1, padding: "7px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none",
+                            background: statsSeasonType === type ? "var(--accent)" : "var(--surface2)",
+                            color: statsSeasonType === type ? "#fff" : "var(--text-muted)" }}>
+                          {type === "regular" ? "정규시즌" : "포스트시즌"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {statsLoading ? (
+                      <div className="loading-spinner"><div className="spinner" /></div>
+                    ) : statsData.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: 13 }}>
+                        데이터가 없습니다
+                      </div>
+                    ) : (() => {
+                      const top3 = statsData.slice(0, 3);
+                      const bottom3 = [...statsData].reverse().slice(0, 3).reverse();
+                      const renderRow = (d: { team: string; total: number; correct: number; pct: number }, i: number, isTop: boolean) => (
+                        <div key={d.team} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", borderBottom: "1px solid var(--border)" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", width: 16, textAlign: "center", flexShrink: 0 }}>
+                            {i + 1}
+                          </span>
+                          <img src={getTeamLogoUrl(d.team)} alt={d.team}
+                            style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                            onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {TEAMS.find(t => t.en === d.team)?.ko || d.team}
+                            </div>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{d.correct}/{d.total}경기</div>
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: 16, flexShrink: 0,
+                            color: isTop ? "var(--green)" : "#ef4444" }}>
+                            {d.pct}%
+                          </div>
+                        </div>
+                      );
+                      return (
+                        <>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, letterSpacing: "0.05em" }}>상위 3팀</div>
+                          {top3.map((d, i) => renderRow(d, i, true))}
+                          {statsData.length > 3 && (
+                            <>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", margin: "14px 0 6px", letterSpacing: "0.05em" }}>하위 3팀</div>
+                              {bottom3.map((d, i) => renderRow(d, statsData.length - bottom3.length + i, false))}
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
