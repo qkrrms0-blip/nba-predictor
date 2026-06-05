@@ -1,7 +1,7 @@
 // src/app/voting/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -46,6 +46,22 @@ export default function VotingPage() {
   const [pageIndex, setPageIndex] = useState(0);
 
   const GAMES_PER_PAGE = 5;
+
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent, totalPages: number) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) setPageIndex((p) => Math.min(p + 1, totalPages - 1)); // 왼쪽 스와이프 → 다음
+      else setPageIndex((p) => Math.max(p - 1, 0));                        // 오른쪽 스와이프 → 이전
+    }
+    touchStartX.current = null;
+  };
 
   // 투표 현황 — 마감 전 경기 기준
   const [myVoteCount, setMyVoteCount] = useState(0);
@@ -352,6 +368,11 @@ export default function VotingPage() {
               </div>
             )}
 
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchEnd={(e) => handleTouchEnd(e, totalPages)}
+              style={{ touchAction: "pan-y" }}
+            >
             {pagedGames.map((game) => {
           const closed = isDeadlinePassed(game);
           const isRegular = !ROUND_POINTS[game.round];
@@ -444,6 +465,7 @@ export default function VotingPage() {
             </div>
           );
             })}
+            </div>
           </>
         );
       })()}
