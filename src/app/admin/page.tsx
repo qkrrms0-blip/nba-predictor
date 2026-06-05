@@ -625,16 +625,16 @@ export default function AdminPage() {
               {pendingGames.length > 0 && (
                 <>
                   <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 4 }}>
-                    ⏳ 채점 대기 ({pendingGames.length}경기)
+                    채점 대기 ({pendingGames.length}경기)
                   </div>
                   {pendingGames.map((game) => {
                     const pts = ROUND_POINTS[game.round];
                     return (
                       <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center" }}>
 
-                          {/* 좌: 라운드+점수 2열, 아래 날짜시간 */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, minWidth: 60 }}>
+                          {/* 좌: 고정폭 — 라운드+pt 한 줄, 아래 날짜시간 */}
+                          <div style={{ width: 110, flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 }}>
                             <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
                               <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>
                                 {game.round}
@@ -650,15 +650,15 @@ export default function AdminPage() {
                             </span>
                           </div>
 
-                          {/* 중: 팀명 약어 vs 약어 */}
+                          {/* 중: 항상 같은 위치 — 약어 vs 약어 */}
                           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
                             <span>{getTeamAbbr(game.home_team)}</span>
                             <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
                             <span>{getTeamAbbr(game.away_team)}</span>
                           </div>
 
-                          {/* 우: 삭제 / 홈승 원정승 */}
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                          {/* 우: 삭제 / 홈약어 원정약어 */}
+                          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                             <button onClick={() => deleteGame(game.id)}
                               style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
                               삭제
@@ -666,11 +666,11 @@ export default function AdminPage() {
                             <div style={{ display: "flex", gap: 4 }}>
                               <button onClick={() => gradeGame(game.id, "home")}
                                 style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.1)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)", whiteSpace: "nowrap" }}>
-                                {getTeamAbbr(game.home_team)} 승
+                                {getTeamAbbr(game.home_team)}
                               </button>
                               <button onClick={() => gradeGame(game.id, "away")}
                                 style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.3)", whiteSpace: "nowrap" }}>
-                                {getTeamAbbr(game.away_team)} 승
+                                {getTeamAbbr(game.away_team)}
                               </button>
                             </div>
                           </div>
@@ -811,10 +811,10 @@ export default function AdminPage() {
                 <>
                   {pagedGames.map((game) => (
                     <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center" }}>
 
-                        {/* 좌: 라운드+점수 2열, 아래 날짜시간 */}
-                        <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, minWidth: 60 }}>
+                        {/* 좌: 고정폭 — 라운드+pt 한 줄, 아래 날짜시간 */}
+                        <div style={{ width: 110, flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 }}>
                           <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
                             <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>
                               {game.round}
@@ -830,7 +830,7 @@ export default function AdminPage() {
                           </span>
                         </div>
 
-                        {/* 중: 팀명 약어 vs 약어 */}
+                        {/* 중: 항상 같은 위치 — 약어 vs 약어 */}
                         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
                           <span>{getTeamAbbr(game.home_team)}</span>
                           <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
@@ -838,7 +838,7 @@ export default function AdminPage() {
                         </div>
 
                         {/* 우: 채점완료+삭제 / 승선택 */}
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                           {/* 윗줄: 채점완료 + 삭제 */}
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                             {game.winner && <span className="badge badge-correct" style={{ fontSize: 10 }}>채점완료</span>}
