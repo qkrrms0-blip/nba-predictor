@@ -28,6 +28,8 @@ interface GameWithVotes extends Game {
   homeVotes?: number;
   awayVotes?: number;
   totalVotes?: number;
+  correctVoters?: { name: string; points: number }[];
+  correctCount?: number;
 }
 
 interface TopRanker {
@@ -44,6 +46,7 @@ export default function VotingPage() {
   const [toast, setToast] = useState("");
   const [topRankers, setTopRankers] = useState<TopRanker[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
+  const [expandedGame, setExpandedGame] = useState<number | null>(null);
 
   const GAMES_PER_PAGE = 5;
 
@@ -207,29 +210,44 @@ export default function VotingPage() {
 
     // 투표 현황은 loadOverallVoteCount에서 4일치 합산으로 관리
 
-    // 마감된 경기 전체 투표 현황 (퍼센트 바)
+    // 마감된 경기 전체 투표 현황 (퍼센트 바 + 적중자)
     const deadlinePassedIds = gamesData
       .filter((g: Game) => !votableIds.has(g.id))
       .map((g: Game) => g.id);
 
     let voteStats: Record<number, { home: number; away: number }> = {};
+    let correctVotersMap: Record<number, { name: string; points: number }[]> = {};
+
     if (deadlinePassedIds.length > 0) {
       const { data: allVotes } = await supabase.from("votes")
-        .select("game_id, voted_team").in("game_id", deadlinePassedIds);
-      allVotes?.forEach((v: { game_id: number; voted_team: string }) => {
+        .select("game_id, voted_team, is_correct, points, user_id")
+        .in("game_id", deadlinePassedIds);
+
+      const { data: allUsers } = await supabase.from("users").select("id, name");
+      const userMap: Record<string, string> = {};
+      allUsers?.forEach((u: { id: string; name: string }) => { userMap[u.id] = u.name; });
+
+      allVotes?.forEach((v: { game_id: number; voted_team: string; is_correct: boolean | null; points: number | null; user_id: string }) => {
         if (!voteStats[v.game_id]) voteStats[v.game_id] = { home: 0, away: 0 };
         voteStats[v.game_id][v.voted_team as "home" | "away"]++;
+        if (v.is_correct) {
+          if (!correctVotersMap[v.game_id]) correctVotersMap[v.game_id] = [];
+          correctVotersMap[v.game_id].push({ name: userMap[v.user_id] || "알 수 없음", points: v.points || 0 });
+        }
       });
     }
 
     const enriched: GameWithVotes[] = gamesData.map((game: GameWithVotes) => {
       const myVote = myVotes?.find((v: Vote) => v.game_id === game.id);
       const stats = voteStats[game.id];
+      const correctVoters = correctVotersMap[game.id] || [];
       return {
         ...game, myVote,
         homeVotes: stats?.home || 0,
         awayVotes: stats?.away || 0,
         totalVotes: (stats?.home || 0) + (stats?.away || 0),
+        correctVoters,
+        correctCount: correctVoters.length,
       };
     });
 
@@ -524,6 +542,34 @@ export default function VotingPage() {
                     <div className="vote-bar-fill" style={{ width: `${homePct}%` }} />
                   </div>
                   <span className="vote-pct">{awayPct}%</span>
+                </div>
+              )}
+
+              {/* 정산된 경기: 적중자 */}
+              {game.winner && (
+                <div style={{ marginTop: 6 }}>
+                  <button
+                    onClick={() => setExpandedGame(expandedGame === game.id ? null : game.id)}
+                    style={{
+                      width: "100%", textAlign: "left", background: "var(--surface2)",
+                      border: "1px solid var(--border)", borderRadius: 8,
+                      padding: "5px 10px", fontSize: 12, color: "var(--text-muted)", cursor: "pointer",
+                    }}>
+                    적중자 {game.correctCount}명 {expandedGame === game.id ? "▲" : "▼"}
+                  </button>
+                  {expandedGame === game.id && (game.correctCount ?? 0) > 0 && (
+                    <div style={{
+                      marginTop: 6, padding: "6px 10px",
+                      background: "rgba(34,197,94,0.08)",
+                      borderRadius: 6, fontSize: 13, lineHeight: 1.8,
+                    }}>
+                      {game.correctVoters?.map((voter, i) => (
+                        <span key={i}>
+                          {voter.name}{i < (game.correctVoters?.length ?? 0) - 1 ? "\u00A0 " : ""}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
