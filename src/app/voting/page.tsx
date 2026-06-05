@@ -174,12 +174,14 @@ export default function VotingPage() {
     const dayStart = new Date(targetDate); dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(targetDate); dayEnd.setHours(23, 59, 59, 999);
 
-    const { data: gamesData } = await supabase
+    let query = supabase
       .from("games").select("*")
       .gte("start_time", dayStart.toISOString())
       .lte("start_time", dayEnd.toISOString())
-      .is("winner", null)
       .order("start_time");
+    // 오늘 탭은 정산완료 게임도 표시, 나머지는 미정산만
+    if (offset !== 0) query = query.is("winner", null);
+    const { data: gamesData } = await query;
 
     if (!gamesData || gamesData.length === 0) {
       setGames([]);
@@ -455,19 +457,30 @@ export default function VotingPage() {
                   </button>
                   <img
                     src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
-                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
+                    style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0,
+                      filter: game.winner && game.winner !== "home"
+                        ? "drop-shadow(0 1px 6px rgba(0,0,0,0.5)) grayscale(1) opacity(0.35)"
+                        : "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
                   />
                 </div>
 
-                {/* 가운데 VS 메타블록: 시간 / VS / 마감 */}
+                {/* 가운데 VS 메타블록: 시간 / VS or 결과 / 마감 */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, minWidth: 72 }}>
                   <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                     {format(new Date(game.start_time), "HH:mm")}
                   </span>
-                  <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--text-muted)", lineHeight: 1.1 }}>
-                    VS
-                  </span>
+                  {game.winner ? (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", lineHeight: 1.2, textAlign: "center" }}>
+                      {game.winner === "home" ? game.home_team : game.away_team}
+                      <br />
+                      <span style={{ fontSize: 9, fontWeight: 500, color: "var(--text-muted)" }}>승리</span>
+                    </span>
+                  ) : (
+                    <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--text-muted)", lineHeight: 1.1 }}>
+                      VS
+                    </span>
+                  )}
                   {game.vote_deadline && (
                     closed
                       ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>마감됨</span>
@@ -481,7 +494,10 @@ export default function VotingPage() {
                 <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 6 }}>
                   <img
                     src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
-                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
+                    style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0,
+                      filter: game.winner && game.winner !== "away"
+                        ? "drop-shadow(0 1px 6px rgba(0,0,0,0.5)) grayscale(1) opacity(0.35)"
+                        : "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
                   />
                   <button
