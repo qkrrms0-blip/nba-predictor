@@ -1,9 +1,16 @@
 // src/app/admin/page.tsx
+// NOTE: globals.css에 아래 추가 필요:
+// .datepicker-full { width: 100%; }
+// .datepicker-full .react-datepicker-wrapper { width: 100%; }
+// .datepicker-full input { width: 100%; }
 "use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
+import { ko } from "date-fns/locale";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { User, Season, Round, ROUND_POINTS } from "@/lib/types";
 import { getTeamLogoUrl } from "@/lib/nba-api";
 
@@ -144,31 +151,14 @@ export default function AdminPage() {
   const [newGame, setNewGame] = useState({
     home_team: TEAMS[0].en,
     away_team: TEAMS[1].en,
-    start_time: defaultStartTime(),
-    vote_deadline: defaultDeadline(),
+    start_time: (() => { const d = addDays(new Date(), 1); d.setHours(8, 0, 0, 0); return d; })(),
+    vote_deadline: (() => { const d = addDays(new Date(), 1); d.setHours(8, 0, 0, 0); return d; })(),
     round: "First Round" as Round,
     season_id: 1,
   });
 
   // 채점 변경용
   const [regradeGameId, setRegradeGameId] = useState<number | null>(null);
-
-  // 커스텀 시간 picker 상태 (오전/오후, 시, 분)
-  function parseDatetimeLocal(val: string) {
-    // val: "yyyy-MM-ddTHH:mm"
-    const [datePart, timePart] = val.split("T");
-    const [hStr, mStr] = (timePart || "08:00").split(":");
-    const h = parseInt(hStr, 10);
-    const m = parseInt(mStr, 10);
-    const ampm = h < 12 ? "AM" : "PM";
-    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    return { datePart, ampm, hour: h12, minute: m };
-  }
-  function buildDatetimeLocal(datePart: string, ampm: string, hour: number, minute: number) {
-    let h24 = hour % 12;
-    if (ampm === "PM") h24 += 12;
-    return `${datePart}T${String(h24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-  }
 
   // ESPN 연동
   const [espnStartDate, setEspnStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -183,7 +173,6 @@ export default function AdminPage() {
   const [addGameOpen, setAddGameOpen] = useState(false);
 
   // 경기 목록 필터 - 월 선택 + 날짜 선택
-  const currentYear = new Date().getFullYear();
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "MM"));
   const [filterDay, setFilterDay] = useState<string | null>(null);
   const [gamePage, setGamePage] = useState(1);
@@ -194,8 +183,9 @@ export default function AdminPage() {
     return month >= 4 ? "post" : "regular";
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [endSeasonInput, setEndSeasonInput] = useState<Record<number, string>>({});
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [endSeasonModal, setEndSeasonModal] = useState<number | null>(null);
+  const [endSeasonModalInput, setEndSeasonModalInput] = useState("");
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -312,8 +302,8 @@ export default function AdminPage() {
     const { error } = await supabase.from("games").insert({
       home_team: newGame.home_team,
       away_team: newGame.away_team,
-      start_time: new Date(newGame.start_time).toISOString(),
-      vote_deadline: new Date(newGame.vote_deadline).toISOString(),
+      start_time: newGame.start_time.toISOString(),
+      vote_deadline: newGame.vote_deadline.toISOString(),
       round: newGame.round,
       season_id: newGame.season_id,
     });
@@ -473,15 +463,27 @@ export default function AdminPage() {
                 <div style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                     <label className="form-label">시작일</label>
-                    <input type="date" className="text-input"
-                      value={espnStartDate}
-                      onChange={(e) => setEspnStartDate(e.target.value)} />
+                    <DatePicker
+                      selected={new Date(espnStartDate)}
+                      onChange={(d) => d && setEspnStartDate(format(d, "yyyy-MM-dd"))}
+                      dateFormat="yyyy.MM.dd"
+                      locale={ko}
+                      className="text-input"
+                      wrapperClassName="datepicker-full"
+                      popperPlacement="bottom-start"
+                    />
                   </div>
                   <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                     <label className="form-label">종료일</label>
-                    <input type="date" className="text-input"
-                      value={espnEndDate}
-                      onChange={(e) => setEspnEndDate(e.target.value)} />
+                    <DatePicker
+                      selected={new Date(espnEndDate)}
+                      onChange={(d) => d && setEspnEndDate(format(d, "yyyy-MM-dd"))}
+                      dateFormat="yyyy.MM.dd"
+                      locale={ko}
+                      className="text-input"
+                      wrapperClassName="datepicker-full"
+                      popperPlacement="bottom-start"
+                    />
                   </div>
                 </div>
 
@@ -582,46 +584,25 @@ export default function AdminPage() {
                     </div>
 
                     {/* 시작시간 / 마감시간 */}
-                    {(["start_time", "vote_deadline"] as const).map((field) => {
-                      const label = field === "start_time" ? "경기 시작시간" : "투표 마감시간";
-                      const { datePart, ampm, hour, minute } = parseDatetimeLocal(newGame[field]);
-                      const setField = (dp: string, ap: string, h: number, m: number) =>
-                        setNewGame({ ...newGame, [field]: buildDatetimeLocal(dp, ap, h, m) });
-                      return (
-                        <div key={field} className="form-group">
-                          <label className="form-label">{label}</label>
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            {/* 날짜 */}
-                            <input type="date" className="text-input" style={{ flex: 2, minWidth: 0 }}
-                              value={datePart}
-                              onChange={(e) => setField(e.target.value, ampm, hour, minute)} />
-                            {/* 오전/오후 */}
-                            <select className="filter-select" style={{ flex: 1, minWidth: 0 }}
-                              value={ampm}
-                              onChange={(e) => setField(datePart, e.target.value, hour, minute)}>
-                              <option value="AM">오전</option>
-                              <option value="PM">오후</option>
-                            </select>
-                            {/* 시 */}
-                            <select className="filter-select" style={{ flex: 1, minWidth: 0 }}
-                              value={hour}
-                              onChange={(e) => setField(datePart, ampm, Number(e.target.value), minute)}>
-                              {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                                <option key={h} value={h}>{h}시</option>
-                              ))}
-                            </select>
-                            {/* 분 */}
-                            <select className="filter-select" style={{ flex: 1, minWidth: 0 }}
-                              value={minute}
-                              onChange={(e) => setField(datePart, ampm, hour, Number(e.target.value))}>
-                              {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
-                                <option key={m} value={m}>{String(m).padStart(2, "0")}분</option>
-                              ))}
-                            </select>
-                          </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {(["start_time", "vote_deadline"] as const).map((field) => (
+                        <div key={field} className="form-group" style={{ flex: 1, minWidth: 0 }}>
+                          <label className="form-label">{field === "start_time" ? "경기 시작시간" : "투표 마감시간"}</label>
+                          <DatePicker
+                            selected={newGame[field]}
+                            onChange={(d) => d && setNewGame({ ...newGame, [field]: d })}
+                            showTimeSelect
+                            timeFormat="aa h:mm"
+                            timeIntervals={5}
+                            dateFormat="yyyy.MM.dd aa h:mm"
+                            locale={ko}
+                            className="text-input"
+                            wrapperClassName="datepicker-full"
+                            popperPlacement="bottom-start"
+                          />
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
 
                     {/* 라운드 */}
                     <div className="form-group">
@@ -647,77 +628,53 @@ export default function AdminPage() {
                     ⏳ 채점 대기 ({pendingGames.length}경기)
                   </div>
                   {pendingGames.map((game) => {
-                    const isRegular = !ROUND_POINTS[game.round];
                     const pts = ROUND_POINTS[game.round];
                     return (
-                      <div key={game.id} className="game-card-compact">
-                        {/* 투표페이지와 동일한 팀 로고 레이아웃 */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
 
-                          {/* 왼쪽: 라운드/포인트 */}
-                          <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {!isRegular && (
-                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                                <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>
-                                  {game.round.replace(" ", "\n")}
+                          {/* 좌: 라운드+점수 2열, 아래 날짜시간 */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, minWidth: 60 }}>
+                            <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                              <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                {game.round}
+                              </span>
+                              {pts && (
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                                  {pts}pt
                                 </span>
-                                {pts && (
-                                  <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
-                                    {pts}pt
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 홈팀: 삭제+승버튼(바깥) | 로고(VS쪽) */}
-                          <div style={{ flex: 1, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                              <button onClick={() => deleteGame(game.id)}
-                                style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
-                                삭제
-                              </button>
-                              <button
-                                onClick={() => gradeGame(game.id, "home")}
-                                style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid rgba(34,197,94,0.5)", background: "rgba(34,197,94,0.1)", color: "var(--green)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                                승
-                              </button>
+                              )}
                             </div>
-                            <img
-                              src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
-                              style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0, filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
-                              onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                            />
-                          </div>
-
-                          {/* 가운데 VS 메타블록 */}
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, minWidth: 72 }}>
-                            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                            <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                               {format(new Date(game.start_time), "M/d HH:mm")}
                             </span>
-                            <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--text-muted)", lineHeight: 1.1 }}>
-                              VS
-                            </span>
-                            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>채점 대기</span>
                           </div>
 
-                          {/* 원정팀: 로고(VS쪽) | 승버튼(바깥) */}
-                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 6 }}>
-                            <img
-                              src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
-                              style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0, filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
-                              onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                            />
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                              {/* 삭제 자리 맞춤용 빈 공간 */}
-                              <div style={{ height: 22 }} />
-                              <button
-                                onClick={() => gradeGame(game.id, "away")}
-                                style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid rgba(59,130,246,0.5)", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                                승
+                          {/* 중: 팀명 약어 vs 약어 */}
+                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
+                            <span>{getTeamAbbr(game.home_team)}</span>
+                            <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
+                            <span>{getTeamAbbr(game.away_team)}</span>
+                          </div>
+
+                          {/* 우: 삭제 / 홈승 원정승 */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                            <button onClick={() => deleteGame(game.id)}
+                              style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
+                              삭제
+                            </button>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button onClick={() => gradeGame(game.id, "home")}
+                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.1)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)", whiteSpace: "nowrap" }}>
+                                {getTeamAbbr(game.home_team)} 승
+                              </button>
+                              <button onClick={() => gradeGame(game.id, "away")}
+                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.3)", whiteSpace: "nowrap" }}>
+                                {getTeamAbbr(game.away_team)} 승
                               </button>
                             </div>
                           </div>
+
                         </div>
                       </div>
                     );
@@ -854,27 +811,33 @@ export default function AdminPage() {
                 <>
                   {pagedGames.map((game) => (
                     <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
-                      {/* 3컬럼: 좌(라운드/시간) | 중(팀명) | 우(채점완료+삭제 / 승선택) */}
-                      <div style={{ display: "flex", alignItems: "stretch", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
 
-                        {/* 좌: 라운드 + 날짜시간 */}
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, flexShrink: 0, minWidth: 56 }}>
-                          <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 5px", fontWeight: 700, textAlign: "center", whiteSpace: "nowrap" }}>
-                            {game.round}
-                          </span>
+                        {/* 좌: 라운드+점수 2열, 아래 날짜시간 */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, minWidth: 60 }}>
+                          <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                            <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>
+                              {game.round}
+                            </span>
+                            {ROUND_POINTS[game.round] && (
+                              <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                                {ROUND_POINTS[game.round]}pt
+                              </span>
+                            )}
+                          </div>
                           <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                             {format(new Date(game.start_time), "M/d HH:mm")}
                           </span>
                         </div>
 
-                        {/* 중: 팀명 vs 팀명 */}
-                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, fontSize: 12, fontWeight: 600 }}>
+                        {/* 중: 팀명 약어 vs 약어 */}
+                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
                           <span>{getTeamAbbr(game.home_team)}</span>
-                          <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>vs</span>
+                          <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
                           <span>{getTeamAbbr(game.away_team)}</span>
                         </div>
 
-                        {/* 우: 위(채점완료+삭제) / 아래(승선택) */}
+                        {/* 우: 채점완료+삭제 / 승선택 */}
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
                           {/* 윗줄: 채점완료 + 삭제 */}
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
@@ -884,7 +847,7 @@ export default function AdminPage() {
                               삭제
                             </button>
                           </div>
-                          {/* 아랫줄: 승 선택 버튼 */}
+                          {/* 아랫줄: 승 선택 or 재채점 */}
                           {regradeGameId !== game.id ? (
                             <div style={{ display: "flex", gap: 4 }}>
                               <button
@@ -906,7 +869,6 @@ export default function AdminPage() {
                             </div>
                           ) : (
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
-                              <div style={{ fontSize: 10, color: "var(--gold)" }}>⚠️ 재채점</div>
                               <div style={{ display: "flex", gap: 4 }}>
                                 <button style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.2)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.4)", whiteSpace: "nowrap" }}
                                   onClick={() => resetAndRegrade(game.id, "home")}>
@@ -917,8 +879,11 @@ export default function AdminPage() {
                                   {getTeamAbbr(game.away_team)}
                                 </button>
                               </div>
-                              <button style={{ fontSize: 10, color: "var(--text-muted)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
-                                onClick={() => setRegradeGameId(null)}>취소</button>
+                              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                <span style={{ fontSize: 10, color: "var(--gold)" }}>⚠️ 재채점</span>
+                                <button style={{ fontSize: 10, color: "var(--text-muted)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                                  onClick={() => setRegradeGameId(null)}>취소</button>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1031,49 +996,73 @@ export default function AdminPage() {
                 🏆 새 시즌 시작
               </button>
               {seasons.map((s) => (
-                <div key={s.id} className="card">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: s.is_active ? 10 : 0 }}>
+                <div key={s.id} className="card" style={{ padding: "10px 12px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontWeight: 600 }}>{s.name}</div>
-                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                        {format(new Date(s.started_at), "yyyy년 M월 d일")} 시작
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                        {format(new Date(s.started_at), "yyyy.M.d")} 시작
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       {s.is_active && <span className="badge badge-correct">활성</span>}
-                    </div>
-                  </div>
-                  {s.is_active && (
-                    <div>
-                      <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>
-                        시즌을 종료하려면 <strong style={{ color: "#ef4444" }}>시즌종료</strong>를 입력하세요.
-                      </p>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <input
-                          type="text"
-                          className="text-input"
-                          placeholder="시즌종료"
-                          value={endSeasonInput[s.id] || ""}
-                          onChange={(e) => setEndSeasonInput((prev) => ({ ...prev, [s.id]: e.target.value }))}
-                          style={{ flex: 1, fontSize: 13 }}
-                        />
+                      {s.is_active && (
                         <button
-                          onClick={() => {
-                            if (endSeasonInput[s.id] === "시즌종료") {
-                              endSeason(s.id);
-                              setEndSeasonInput((prev) => ({ ...prev, [s.id]: "" }));
-                            } else {
-                              showToast("⚠️ '시즌종료'를 정확히 입력해주세요.");
-                            }
-                          }}
-                          style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "4px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          onClick={() => { setEndSeasonModal(s.id); setEndSeasonModalInput(""); }}
+                          style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                           종료
                         </button>
-                      </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               ))}
+
+              {/* 시즌 종료 모달 */}
+              {endSeasonModal !== null && (
+                <div style={{
+                  position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
+                  display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+                }}>
+                  <div style={{
+                    background: "var(--surface)", border: "1px solid var(--border)",
+                    borderRadius: 14, padding: "24px 20px", width: "100%", maxWidth: 320,
+                  }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>⚠️ 시즌 종료</div>
+                    <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14 }}>
+                      확인을 위해 <strong style={{ color: "#ef4444" }}>시즌종료</strong>를 입력하세요.
+                    </p>
+                    <input
+                      type="text"
+                      className="text-input"
+                      placeholder="시즌종료"
+                      value={endSeasonModalInput}
+                      onChange={(e) => setEndSeasonModalInput(e.target.value)}
+                      style={{ width: "100%", marginBottom: 12, fontSize: 14 }}
+                      autoFocus
+                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() => setEndSeasonModal(null)}
+                        style={{ flex: 1, padding: "8px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>
+                        취소
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (endSeasonModalInput === "시즌종료") {
+                            endSeason(endSeasonModal);
+                            setEndSeasonModal(null);
+                          } else {
+                            showToast("⚠️ '시즌종료'를 정확히 입력해주세요.");
+                          }
+                        }}
+                        style={{ flex: 1, padding: "8px", borderRadius: 8, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
+                        종료
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </>

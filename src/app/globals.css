@@ -806,3 +806,84 @@ html, body {
   background: var(--accent-glow);
   color: var(--accent);
 }
+
+/* react-datepicker 커스텀 */
+.datepicker-full { width: 100%; }
+.datepicker-full .react-datepicker-wrapper { width: 100%; }
+.datepicker-full input { width: 100%; }
+
+.react-datepicker {
+  background: var(--surface2) !important;
+  border: 1px solid var(--border-bright) !important;
+  border-radius: var(--radius) !important;
+  font-family: var(--font-body) !important;
+  color: var(--text) !important;
+}
+
+.react-datepicker__header {
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: var(--radius) var(--radius) 0 0 !important;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name,
+.react-datepicker-time__header {
+  color: var(--text) !important;
+}
+
+.react-datepicker__day {
+  color: var(--text) !important;
+  border-radius: 6px !important;
+}
+
+.react-datepicker__day:hover {
+  background: var(--surface) !important;
+  color: var(--accent) !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+.react-datepicker__day--outside-month {
+  color: var(--text-muted) !important;
+  opacity: 0.4;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: var(--text-muted) !important;
+}
+
+.react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+  border-color: var(--accent) !important;
+}
+
+.react-datepicker__time-container {
+  border-left: 1px solid var(--border) !important;
+}
+
+.react-datepicker__time {
+  background: var(--surface2) !important;
+}
+
+.react-datepicker__time-list-item {
+  color: var(--text) !important;
+}
+
+.react-datepicker__time-list-item:hover {
+  background: var(--surface) !important;
+  color: var(--accent) !important;
+}
+
+.react-datepicker__time-list-item--selected {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+
+.react-datepicker__triangle::before,
+.react-datepicker__triangle::after {
+  border-bottom-color: var(--surface) !important;
+}
