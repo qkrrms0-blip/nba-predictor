@@ -71,10 +71,10 @@ Deno.serve(async () => {
     // ── 1. 지금부터 10분 이내 시작 경기 조회 ──────────────────
     const { data: games, error: gamesErr } = await supabase
       .from("games")
-      .select("id, season, start_time, vote_deadline, home_team, away_team")
+      .select("id, season_id, start_time, vote_deadline, home_team, away_team")
       .is("winner", null)
-      .gte("start_time", now.toISOString())
-      .lte("start_time", in10min.toISOString());
+      .gte("vote_deadline", now.toISOString())
+      .lte("vote_deadline", in10min.toISOString());
 
     if (gamesErr) throw gamesErr;
     if (!games || games.length === 0) {
@@ -84,7 +84,6 @@ Deno.serve(async () => {
     let totalVoted = 0;
 
     for (const game of games) {
-      if (game.vote_deadline && new Date(game.vote_deadline) < now) continue;
 
       // ── 2. random_auto_vote = true 인 구독자 조회 ──────────
       const { data: subs, error: subsErr } = await supabase
@@ -130,7 +129,7 @@ Deno.serve(async () => {
         (s: { user_id: string; odds_auto_vote: boolean }) => ({
           user_id: s.user_id,
           game_id: game.id,
-          season_id: game.season,
+          season_id: game.season_id,
           // 배당 ON → 배당 기준, OFF → 랜덤
           voted_team: s.odds_auto_vote && favoriteTeam
             ? favoriteTeam

@@ -43,6 +43,9 @@ export default function VotingPage() {
   const [userId, setUserId] = useState<string>("");
   const [toast, setToast] = useState("");
   const [topRankers, setTopRankers] = useState<TopRanker[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
+
+  const GAMES_PER_PAGE = 5;
 
   // 투표 현황 — 마감 전 경기 기준
   const [myVoteCount, setMyVoteCount] = useState(0);
@@ -210,7 +213,7 @@ export default function VotingPage() {
 
   useEffect(() => { loadTopRankers(); }, [loadTopRankers]);
   useEffect(() => { loadOverallVoteCount(); }, [loadOverallVoteCount]);
-  useEffect(() => { loadGames(dateOffset); }, [dateOffset, loadGames]);
+  useEffect(() => { setPageIndex(0); loadGames(dateOffset); }, [dateOffset, loadGames]);
 
   const handleVote = async (gameId: number, team: "home" | "away", seasonId: number) => {
     const game = games.find((g) => g.id === gameId);
@@ -321,8 +324,35 @@ export default function VotingPage() {
           <div className="empty-title">경기가 없습니다</div>
           <p style={{ fontSize: 13, marginTop: 4 }}>다른 날짜를 선택해보세요.</p>
         </div>
-      ) : (
-        games.map((game) => {
+      ) : (() => {
+        const totalPages = Math.min(Math.ceil(games.length / GAMES_PER_PAGE), 3);
+        const pagedGames = games.slice(pageIndex * GAMES_PER_PAGE, (pageIndex + 1) * GAMES_PER_PAGE);
+        return (
+          <>
+            {/* 페이지 점 네비게이션 — 2페이지 이상일 때만 표시 */}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, padding: "4px 0 2px" }}>
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPageIndex(i)}
+                    style={{
+                      width: i === pageIndex ? 7 : 5,
+                      height: i === pageIndex ? 7 : 5,
+                      borderRadius: "50%",
+                      background: i === pageIndex ? "var(--text)" : "var(--border)",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      flexShrink: 0,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {pagedGames.map((game) => {
           const closed = isDeadlinePassed(game);
           const isRegular = !ROUND_POINTS[game.round];
           const pts = ROUND_POINTS[game.round];
@@ -413,8 +443,10 @@ export default function VotingPage() {
               )}
             </div>
           );
-        })
-      )}
+            })}
+          </>
+        );
+      })()}
       {toast && <div className="toast">{toast}</div>}
     </>
   );
