@@ -49,51 +49,65 @@ export default function VotingPage() {
 
   const touchStartX = useRef<number | null>(null);
   const mouseStartX = useRef<number | null>(null);
-  const isDragging = useRef(false);
   const wheelCooldown = useRef(false);
   const totalPagesRef = useRef(1);
+  const pageIndexRef = useRef(0);
 
-  const goNext = () => setPageIndex((p) => Math.min(p + 1, totalPagesRef.current - 1));
-  const goPrev = () => setPageIndex((p) => Math.max(p - 1, 0));
+  const goNext = useCallback(() => {
+    setPageIndex((p) => {
+      const next = Math.min(p + 1, totalPagesRef.current - 1);
+      pageIndexRef.current = next;
+      return next;
+    });
+  }, []);
+  const goPrev = useCallback(() => {
+    setPageIndex((p) => {
+      const prev = Math.max(p - 1, 0);
+      pageIndexRef.current = prev;
+      return prev;
+    });
+  }, []);
 
-  // 터치
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) diff > 0 ? goNext() : goPrev();
-    touchStartX.current = null;
-  };
+  // window에 직접 이벤트 — 어디서든 동작
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (touchStartX.current === null) return;
+      const diff = touchStartX.current - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 40) diff > 0 ? goNext() : goPrev();
+      touchStartX.current = null;
+    };
+    const onMouseDown = (e: MouseEvent) => { mouseStartX.current = e.clientX; };
+    const onMouseUp = (e: MouseEvent) => {
+      if (mouseStartX.current === null) return;
+      const diff = mouseStartX.current - e.clientX;
+      if (Math.abs(diff) > 40) diff > 0 ? goNext() : goPrev();
+      mouseStartX.current = null;
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (totalPagesRef.current <= 1) return;
+      if (wheelCooldown.current) return;
+      if (Math.abs(e.deltaY) < 30) return;
+      wheelCooldown.current = true;
+      e.deltaY > 0 ? goNext() : goPrev();
+      setTimeout(() => { wheelCooldown.current = false; }, 600);
+    };
 
-  // 마우스 드래그 (PC)
-  const handleMouseDown = (e: React.MouseEvent) => {
-    mouseStartX.current = e.clientX;
-    isDragging.current = false;
-  };
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (mouseStartX.current === null) return;
-    if (Math.abs(e.clientX - mouseStartX.current) > 5) isDragging.current = true;
-  };
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (mouseStartX.current === null) return;
-    const diff = mouseStartX.current - e.clientX;
-    if (Math.abs(diff) > 40) diff > 0 ? goNext() : goPrev();
-    mouseStartX.current = null;
-    isDragging.current = false;
-  };
-
-  // 마우스 휠 (PC) — 아래로 → 다음, 위로 → 이전
-  const handleWheel = (e: React.WheelEvent) => {
-    if (totalPagesRef.current <= 1) return;
-    if (wheelCooldown.current) return;
-    if (Math.abs(e.deltaY) < 30) return;
-    e.preventDefault();
-    wheelCooldown.current = true;
-    e.deltaY > 0 ? goNext() : goPrev();
-    setTimeout(() => { wheelCooldown.current = false; }, 600);
-  };
+    window.addEventListener("touchstart", onTouchStart);
+    window.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("wheel", onWheel);
+    };
+  }, [goNext, goPrev]);
 
   // 투표 현황 — 마감 전 경기 기준
   const [myVoteCount, setMyVoteCount] = useState(0);
@@ -302,15 +316,7 @@ export default function VotingPage() {
   };
 
   return (
-    <div
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onWheel={handleWheel}
-      style={{ touchAction: "pan-y", userSelect: "none" }}
-    >
+    <div style={{ touchAction: "pan-y", userSelect: "none" }}>
       {/* 시즌 랭킹 Top 3 */}
       {topRankers.length > 0 && (
         <div style={{
