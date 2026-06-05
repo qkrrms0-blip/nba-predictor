@@ -611,7 +611,7 @@ export default function AdminPage() {
                 <div style={{
                   fontWeight: 700, fontSize: 14, padding: "10px 14px",
                   borderBottom: "1px solid var(--border)",
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  display: "flex", alignItems: "center", gap: 6,
                 }}>
                   <span>채점 대기</span>
                   {pendingGames.length > 0 && (
@@ -687,7 +687,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              </> /* 1페이지 끝 */}
+              </>}
 
               {/* ── 2페이지: 경기추가 + 채점완료 ── */}
               {gameTabPage === 1 && <>
@@ -781,26 +781,23 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* 채점 완료 경기 - 접기/펼치기 박스 */}
-              <div style={{
-                border: "1px solid var(--border)", borderRadius: 10,
-                background: "var(--surface)", marginBottom: 12,
-              }}>
-                <div
-                  onClick={() => setCompletedSectionOpen((v) => !v)}
-                  style={{
-                    fontWeight: 700, fontSize: 14, padding: "10px 14px",
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    cursor: "pointer", userSelect: "none",
-                    borderBottom: completedSectionOpen ? "1px solid var(--border)" : "none",
-                  }}>
-                  <span>채점 완료 경기</span>
-                  <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
-                    {completedSectionOpen ? "−" : "+"}
-                  </span>
-                </div>
+              {/* 채점 완료 경기 - 원본 스타일 헤더 */}
+              <div
+                onClick={() => setCompletedSectionOpen((v) => !v)}
+                style={{
+                  fontWeight: 700, fontSize: 14, marginTop: 8, marginBottom: 4,
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  cursor: "pointer", userSelect: "none",
+                  padding: "10px 14px", borderRadius: 10,
+                  border: "1px solid var(--border)", background: "var(--surface)",
+                }}>
+                <span>채점 완료 경기</span>
+                <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
+                  {completedSectionOpen ? "−" : "+"}
+                </span>
+              </div>
 
-              {completedSectionOpen && <div style={{ padding: "8px 0" }}>
+              {completedSectionOpen && <>
 
               {/* history 스타일 필터 바 */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 8, overflowX: "auto", scrollbarWidth: "none" }}>
@@ -1023,10 +1020,9 @@ export default function AdminPage() {
                 </>
               )}
 
-              </div> /* completedSectionOpen 내용 끝 */}
-              </div> /* 채점완료 박스 끝 */
+              </>}
 
-              </> /* 2페이지 끝 */}
+              </>}
 
             </>
           )}
@@ -1099,7 +1095,7 @@ export default function AdminPage() {
             <>
               <button className="btn-primary" style={{ width: "100%", marginBottom: 16 }}
                 onClick={startNewSeason}>
-                🏆 새 시즌 시작
+                새 시즌 시작
               </button>
               {seasons.map((s) => (
                 <div key={s.id} className="card" style={{ padding: "10px 12px", marginBottom: 8 }}>
