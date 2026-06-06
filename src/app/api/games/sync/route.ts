@@ -35,16 +35,18 @@ export async function POST(request: Request) {
     const games = await fetchGamesByDateRange(startDate, endDate);
     const adminSupabase = createAdminClient();
 
-    // 기존 경기 external_id + winner 한 번에 조회
+    // 기존 경기 external_id + winner + status + start_time 한 번에 조회
     const externalIds = games.map((g) => `espn_${g.id}`);
     const { data: existing } = await adminSupabase
       .from("games")
-      .select("external_id, winner")
+      .select("external_id, winner, status, start_time")
       .in("external_id", externalIds);
 
-    // Map으로 기존 winner 저장
+    // Map으로 기존 데이터 저장
     const existingMap = new Map(
-      (existing || []).map((g: { external_id: string; winner: string | null }) => [g.external_id, g.winner])
+      (existing || []).map((g: { external_id: string; winner: string | null; status: string; start_time: string }) =>
+        [g.external_id, { winner: g.winner, status: g.status, start_time: g.start_time }]
+      )
     );
 
     let inserted = 0;
@@ -54,10 +56,10 @@ export async function POST(request: Request) {
 
     for (const game of games) {
       const dbGame = mapESPNGameToDBGame(game, activeSeason.id);
-      const existingWinner = existingMap.get(dbGame.external_id);
+      const existingData = existingMap.get(dbGame.external_id);
 
       // 신규
-      if (!existingMap.has(dbGame.external_id)) {
+      if (!existingData) {
         const { error } = await adminSupabase
           .from("games")
           .upsert(dbGame, { onConflict: "external_id" });
@@ -66,13 +68,18 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // 기존 winner와 ESPN winner가 같으면 변경 없음 (upsert 스킵)
-      if (existingWinner === dbGame.winner) {
+      // winner, status, start_time 중 하나라도 바뀐 경우만 upsert
+      const changed =
+        existingData.winner !== dbGame.winner ||
+        existingData.status !== dbGame.status ||
+        existingData.start_time !== dbGame.start_time;
+
+      if (!changed) {
         unchanged++;
         continue;
       }
 
-      // winner가 달라진 경우만 upsert
+      // 변경된 경우 upsert
       const { error } = await adminSupabase
         .from("games")
         .upsert(dbGame, { onConflict: "external_id" });

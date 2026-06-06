@@ -118,6 +118,12 @@ export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
   const seasonType = game.season?.type;
   const season_type = seasonType === 2 ? "regular" : "post";
 
+  // status
+  const statusName = comp.status.type.name;
+  const status = statusName === "STATUS_POSTPONED" ? "postponed"
+    : statusName === "STATUS_CANCELLED" ? "cancelled"
+    : "scheduled";
+
   return {
     season_id: seasonId,
     home_team: home.team.displayName,
@@ -129,6 +135,7 @@ export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
     round,
     winner,
     season_type,
+    status,
     external_id: `espn_${game.id}`,
   };
 }

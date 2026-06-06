@@ -181,6 +181,7 @@ export default function VotingPage() {
       .from("games").select("*")
       .gte("start_time", dayStart.toISOString())
       .lte("start_time", dayEnd.toISOString())
+      .not("status", "in", '("postponed","cancelled")')
       .order("start_time");
     // 오늘 탭은 정산완료 게임도 표시, 나머지는 미정산만
     if (offset !== 0) query = query.is("winner", null);
