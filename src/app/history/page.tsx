@@ -639,9 +639,9 @@ function PaginatedGames({ gameResults, pageIndex, setPageIndex, totalPagesRef, G
                   <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
                     {game.round.replace(" ", "\n")}
                   </span>
-                  {ROUND_POINTS[game.round] && (
+                  {(ROUND_POINTS as Record<string, number>)[game.round] && (
                     <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
-                      {ROUND_POINTS[game.round]}pt
+                      {(ROUND_POINTS as Record<string, number>)[game.round]}pt
                     </span>
                   )}
                 </div>
