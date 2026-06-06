@@ -712,16 +712,16 @@ export default function AdminPage() {
                             </div>
                           </div>
 
-                          {/* 중: 날짜시간 위 + 로고 vs 로고 */}
-                          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                          {/* 중: 날짜시간 위 + 로고 [vs] 로고 */}
+                          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
                             <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                               {format(new Date(game.start_time), "M/d HH:mm")}
                             </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center" }}>
                               <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
                                 style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
                                 onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                              <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
+                              <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11, padding: "0 4px" }}>vs</span>
                               <img src={getTeamLogoUrl(game.away_team)} alt={getTeamAbbr(game.away_team)}
                                 style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
                                 onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
@@ -997,18 +997,26 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        {/* 중: 날짜시간 위 + 로고 vs 로고 */}
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                        {/* 중: 날짜시간 위 + 로고 [점수:점수] 로고 */}
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
                           <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                             {format(new Date(game.start_time), "M/d HH:mm")}
                           </span>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ display: "flex", alignItems: "center" }}>
                             <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
-                              style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                              style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0, opacity: game.winner && game.winner !== "home" ? 0.35 : 1 }}
                               onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                            <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "0 4px" }}>
+                              <span style={{ fontSize: 15, fontWeight: 800, color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
+                                {game.home_score ?? "-"}
+                              </span>
+                              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>:</span>
+                              <span style={{ fontSize: 15, fontWeight: 800, color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
+                                {game.away_score ?? "-"}
+                              </span>
+                            </div>
                             <img src={getTeamLogoUrl(game.away_team)} alt={getTeamAbbr(game.away_team)}
-                              style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                              style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0, opacity: game.winner && game.winner !== "away" ? 0.35 : 1 }}
                               onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
                           </div>
                         </div>
