@@ -181,7 +181,6 @@ export default function VotingPage() {
       .from("games").select("*")
       .gte("start_time", dayStart.toISOString())
       .lte("start_time", dayEnd.toISOString())
-      .not("status", "in", '("postponed","cancelled")')
       .order("start_time");
     // 오늘 탭은 정산완료 게임도 표시, 나머지는 미정산만
     if (offset !== 0) query = query.is("winner", null);
@@ -454,7 +453,7 @@ export default function VotingPage() {
                 <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {!isRegular && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                      <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>
+                      <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
                         {game.round.replace(" ", "\n")}
                       </span>
                       {pts && (

@@ -168,7 +168,10 @@ Deno.serve(async () => {
       const { error } = await supabase
         .from("games")
         .upsert(dbGame, { onConflict: "external_id" });
-      if (!error) updated++;
+      if (!error) {
+        console.log(`[updated] ${dbGame.external_id} | status: ${existingData.status}->${dbGame.status} | start_time: ${existingData.start_time}->${dbGame.start_time} | winner: ${existingData.winner}->${dbGame.winner}`);
+        updated++;
+      }
     }
 
     // last_espn_sync 업데이트

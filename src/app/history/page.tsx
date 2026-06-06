@@ -5,7 +5,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
-import { Season } from "@/lib/types";
+import { Season, ROUND_POINTS } from "@/lib/types";
 import { getTeamLogoUrl } from "@/lib/nba-api";
 
 interface GameResult {
@@ -632,32 +632,43 @@ function PaginatedGames({ gameResults, pageIndex, setPageIndex, totalPagesRef, G
             transition: "border-color 0.2s",
           }}>
             {/* 3컬럼 메인 행 */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              {/* 좌: 라운드 + 날짜시간 */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0, minWidth: 72 }}>
-                {game.round && <span className="round-badge" style={{ fontSize: 10, padding: "2px 6px" }}>{game.round}</span>}
-                <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+              {/* 좌: 라운드 + 포인트 배지 (투표탭과 동일) */}
+              <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
+                    {game.round.replace(" ", "\n")}
+                  </span>
+                  {ROUND_POINTS[game.round] && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                      {ROUND_POINTS[game.round]}pt
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* 중: 홈로고 점수 : 점수 원정로고 + 시간 VS위에 */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                   {format(new Date(game.start_time), "M/d HH:mm")}
                 </span>
-              </div>
-              {/* 중: 홈로고 점수 VS 점수 원정로고 */}
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
-                  style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "home" ? 0.35 : 1, flexShrink: 0 }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
-                  {game.home_score ?? "-"}
-                </span>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>VS</span>
-                <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
-                  {game.away_score ?? "-"}
-                </span>
-                <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
-                  style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "away" ? 0.35 : 1, flexShrink: 0 }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
+                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "home" ? 0.35 : 1, flexShrink: 0 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                  <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
+                    {game.home_score ?? "-"}
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>:</span>
+                  <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
+                    {game.away_score ?? "-"}
+                  </span>
+                  <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
+                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "away" ? 0.35 : 1, flexShrink: 0 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                </div>
               </div>
               {/* 우: 완료뱃지 */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
+              <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <span className="badge badge-correct">완료</span>
               </div>
             </div>
