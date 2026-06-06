@@ -23,6 +23,7 @@ function getDefaultDateOffset(): number {
 }
 
 interface GameWithVotes extends Game {
+  status?: string;
   vote_deadline?: string;
   myVote?: Vote;
   homeVotes?: number;
@@ -444,8 +445,24 @@ export default function VotingPage() {
           const homePct = totalVotes > 0 ? Math.round((game.homeVotes || 0) / totalVotes * 100) : 50;
           const awayPct = 100 - homePct;
 
+          const isInactive = (game as any).status === "postponed" || (game as any).status === "cancelled";
+          const stampLabel = (game as any).status === "postponed" ? "POSTPONED" : "CANCELLED";
+
           return (
-            <div key={game.id} className="game-card-compact">
+            <div key={game.id} className="game-card-compact" style={{ position: "relative", opacity: isInactive ? 0.45 : 1, pointerEvents: isInactive ? "none" : "auto" }}>
+              {isInactive && (
+                <div style={{
+                  position: "absolute", top: "50%", left: "50%",
+                  transform: "translate(-50%, -50%) rotate(-20deg)",
+                  border: "3px solid #ef4444", borderRadius: 6,
+                  padding: "3px 10px", color: "#ef4444",
+                  fontSize: 16, fontWeight: 700, letterSpacing: 2,
+                  whiteSpace: "nowrap", opacity: 0.85, zIndex: 10,
+                  pointerEvents: "none",
+                }}>
+                  {stampLabel}
+                </div>
+              )}
               {/* 팀 로고 + 원형버튼 + VS메타 */}
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
 
@@ -509,7 +526,7 @@ export default function VotingPage() {
                     <span style={{ fontSize: 10, color: "var(--text-muted)" }}>최종</span>
                   ) : game.vote_deadline ? (
                     closed
-                      ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>마감됨</span>
+                      ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>투표 마감</span>
                       : <span style={{ fontSize: 10, color: "#ef4444", whiteSpace: "nowrap" }}>
                           마감 {format(new Date(game.vote_deadline), "M/d HH:mm")}
                         </span>
