@@ -8,9 +8,13 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
-import { ko } from "date-fns/locale";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import dayjs, { Dayjs } from "dayjs";
+import "dayjs/locale/ko";
+dayjs.locale("ko");
 import { User, Season, Round, ROUND_POINTS } from "@/lib/types";
 import { getTeamLogoUrl } from "@/lib/nba-api";
 
@@ -90,6 +94,32 @@ function defaultDeadline() {
 
 const ITEMS_PER_PAGE = 10;
 
+// MUI DatePicker 다크테마 스타일
+const muiInputSx = {
+  "& .MuiInputBase-root": {
+    background: "var(--surface)",
+    color: "var(--text)",
+    borderRadius: "8px",
+    fontSize: 13,
+  },
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: "var(--border)",
+  },
+  "& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: "var(--border-bright)",
+  },
+  "& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: "var(--accent)",
+  },
+  "& .MuiSvgIcon-root": {
+    color: "var(--text-muted)",
+  },
+  "& .MuiInputBase-input": {
+    fontSize: 13,
+    padding: "8px 10px",
+  },
+};
+
 function TeamSelect({
   label,
   value,
@@ -148,11 +178,18 @@ export default function AdminPage() {
   const [inviteName, setInviteName] = useState("");
 
   // 경기 추가 폼
-  const [newGame, setNewGame] = useState({
+  const [newGame, setNewGame] = useState<{
+    home_team: string;
+    away_team: string;
+    start_time: Dayjs;
+    vote_deadline: Dayjs;
+    round: Round;
+    season_id: number;
+  }>({
     home_team: TEAMS[0].en,
     away_team: TEAMS[1].en,
-    start_time: (() => { const d = addDays(new Date(), 1); d.setHours(8, 0, 0, 0); return d; })(),
-    vote_deadline: (() => { const d = addDays(new Date(), 1); d.setHours(8, 0, 0, 0); return d; })(),
+    start_time: dayjs().add(1, "day").hour(8).minute(0).second(0),
+    vote_deadline: dayjs().add(1, "day").hour(8).minute(0).second(0),
     round: "First Round" as Round,
     season_id: 1,
   });
@@ -592,27 +629,37 @@ export default function AdminPage() {
                 <div style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                     <label className="form-label">시작일</label>
-                    <DatePicker
-                      selected={new Date(espnStartDate)}
-                      onChange={(d: Date | null) => d && setEspnStartDate(format(d, "yyyy-MM-dd"))}
-                      dateFormat="yyyy.MM.dd"
-                      locale={ko}
-                      className="text-input"
-                      wrapperClassName="datepicker-full"
-                      popperPlacement="bottom-start"
-                    />
+                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                      <DatePicker
+                        value={dayjs(espnStartDate)}
+                        onChange={(d: Dayjs | null) => d && setEspnStartDate(d.format("YYYY-MM-DD"))}
+                        format="YY.MM.DD"
+                        slotProps={{
+                          textField: {
+                            size: "small",
+                            sx: muiInputSx,
+                            style: { width: "100%" },
+                          },
+                        }}
+                      />
+                    </LocalizationProvider>
                   </div>
                   <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                     <label className="form-label">종료일</label>
-                    <DatePicker
-                      selected={new Date(espnEndDate)}
-                      onChange={(d: Date | null) => d && setEspnEndDate(format(d, "yyyy-MM-dd"))}
-                      dateFormat="yyyy.MM.dd"
-                      locale={ko}
-                      className="text-input"
-                      wrapperClassName="datepicker-full"
-                      popperPlacement="bottom-start"
-                    />
+                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                      <DatePicker
+                        value={dayjs(espnEndDate)}
+                        onChange={(d: Dayjs | null) => d && setEspnEndDate(d.format("YYYY-MM-DD"))}
+                        format="YY.MM.DD"
+                        slotProps={{
+                          textField: {
+                            size: "small",
+                            sx: muiInputSx,
+                            style: { width: "100%" },
+                          },
+                        }}
+                      />
+                    </LocalizationProvider>
                   </div>
                 </div>
 
@@ -819,18 +866,22 @@ export default function AdminPage() {
                       {(["start_time", "vote_deadline"] as const).map((field) => (
                         <div key={field} className="form-group" style={{ flex: 1, minWidth: 0 }}>
                           <label className="form-label">{field === "start_time" ? "경기 시작시간" : "투표 마감시간"}</label>
-                          <DatePicker
-                            selected={newGame[field]}
-                            onChange={(d: Date | null) => d && setNewGame({ ...newGame, [field]: d })}
-                            showTimeSelect
-                            timeFormat="aa h:mm"
-                            timeIntervals={5}
-                            dateFormat="yyyy.MM.dd aa h:mm"
-                            locale={ko}
-                            className="text-input"
-                            wrapperClassName="datepicker-full"
-                            popperPlacement="bottom-start"
-                          />
+                          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                            <DateTimePicker
+                              value={newGame[field]}
+                              onChange={(d: Dayjs | null) => d && setNewGame({ ...newGame, [field]: d })}
+                              format="YY/MM/DD A hh:mm"
+                              ampm={true}
+                              minutesStep={10}
+                              slotProps={{
+                                textField: {
+                                  size: "small",
+                                  sx: muiInputSx,
+                                  style: { width: "100%" },
+                                },
+                              }}
+                            />
+                          </LocalizationProvider>
                         </div>
                       ))}
                     </div>

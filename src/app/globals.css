@@ -807,83 +807,81 @@ html, body {
   color: var(--accent);
 }
 
-/* react-datepicker 커스텀 */
-.datepicker-full { width: 100%; }
-.datepicker-full .react-datepicker-wrapper { width: 100%; }
-.datepicker-full input { width: 100%; }
-
-.react-datepicker {
+/* MUI DatePicker / DateTimePicker 다크테마 */
+.MuiPickersPopper-root .MuiPaper-root,
+.MuiDialog-root .MuiPaper-root {
   background: var(--surface2) !important;
   border: 1px solid var(--border-bright) !important;
   border-radius: var(--radius) !important;
+  color: var(--text) !important;
+}
+
+/* 달력 헤더 */
+.MuiPickersCalendarHeader-root,
+.MuiDayCalendar-weekDayLabel {
+  color: var(--text) !important;
+}
+
+/* 날짜 셀 */
+.MuiPickersDay-root {
+  color: var(--text) !important;
+  background: transparent !important;
   font-family: var(--font-body) !important;
-  color: var(--text) !important;
 }
-
-.react-datepicker__header {
-  background: var(--surface) !important;
-  border-bottom: 1px solid var(--border) !important;
-  border-radius: var(--radius) var(--radius) 0 0 !important;
-}
-
-.react-datepicker__current-month,
-.react-datepicker__day-name,
-.react-datepicker-time__header {
-  color: var(--text) !important;
-}
-
-.react-datepicker__day {
-  color: var(--text) !important;
-  border-radius: 6px !important;
-}
-
-.react-datepicker__day:hover {
-  background: var(--surface) !important;
+.MuiPickersDay-root:hover {
+  background: var(--accent-glow) !important;
   color: var(--accent) !important;
 }
-
-.react-datepicker__day--selected,
-.react-datepicker__day--keyboard-selected {
+.MuiPickersDay-root.Mui-selected {
   background: var(--accent) !important;
   color: #fff !important;
 }
-
-.react-datepicker__day--outside-month {
-  color: var(--text-muted) !important;
-  opacity: 0.4;
-}
-
-.react-datepicker__navigation-icon::before {
-  border-color: var(--text-muted) !important;
-}
-
-.react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+.MuiPickersDay-root.MuiPickersDay-today {
   border-color: var(--accent) !important;
 }
 
-.react-datepicker__time-container {
-  border-left: 1px solid var(--border) !important;
-}
-
-.react-datepicker__time {
-  background: var(--surface2) !important;
-}
-
-.react-datepicker__time-list-item {
-  color: var(--text) !important;
-}
-
-.react-datepicker__time-list-item:hover {
+/* 시간 시계 */
+.MuiClock-root,
+.MuiClockPointer-root {
   background: var(--surface) !important;
-  color: var(--accent) !important;
 }
+.MuiClockPointer-root { background: var(--accent) !important; }
+.MuiClockPointer-thumb { background: var(--accent) !important; border-color: var(--accent) !important; }
+.MuiClock-pin { background: var(--accent) !important; }
+.MuiClockNumber-root { color: var(--text) !important; }
+.MuiClockNumber-root.Mui-selected { color: #fff !important; }
 
-.react-datepicker__time-list-item--selected {
+/* 오전/오후 토글 */
+.MuiTimePickerToolbar-ampmSelection button {
+  color: var(--text-muted) !important;
+  border-color: var(--border) !important;
+}
+.MuiTimePickerToolbar-ampmSelection button.Mui-selected {
   background: var(--accent) !important;
   color: #fff !important;
 }
 
-.react-datepicker__triangle::before,
-.react-datepicker__triangle::after {
-  border-bottom-color: var(--surface) !important;
+/* 툴바 텍스트 */
+.MuiPickersToolbar-root,
+.MuiDateTimePickerToolbar-root {
+  background: var(--surface) !important;
+  color: var(--text) !important;
 }
+.MuiPickersToolbar-root button,
+.MuiDateTimePickerToolbar-root button {
+  color: var(--text) !important;
+}
+.MuiPickersToolbar-root button.Mui-selected,
+.MuiDateTimePickerToolbar-root button.Mui-selected {
+  color: var(--accent) !important;
+}
+
+/* 확인/취소 버튼 */
+.MuiDialogActions-root button {
+  color: var(--accent) !important;
+  font-family: var(--font-body) !important;
+}
+
+/* 월/년도 네비게이션 */
+.MuiPickersArrowSwitcher-button { color: var(--text-muted) !important; }
+.MuiPickersArrowSwitcher-button:hover { color: var(--accent) !important; }
