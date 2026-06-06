@@ -1105,16 +1105,20 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        {/* 우: 채점완료+삭제 / 승선택 */}
-                        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                          {/* 윗줄: 채점완료 + 삭제 */}
-                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                            {game.winner && <span className="badge badge-correct" style={{ fontSize: 10 }}>채점완료</span>}
-                            <button onClick={() => deleteGame(game.id)}
-                              style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
-                              삭제
-                            </button>
-                          </div>
+                        {/* 우: 승선택 / 재채점 + COMPLETE 도장 */}
+                        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, position: "relative" }}>
+                          {/* COMPLETE 도장 - winner 있을 때 */}
+                          {game.winner && regradeGameId !== game.id && (
+                            <div style={{
+                              border: "2px solid #22c55e", borderRadius: 4,
+                              padding: "1px 6px", color: "#22c55e",
+                              fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+                              whiteSpace: "nowrap", marginBottom: 2,
+                              transform: "rotate(-8deg)",
+                            }}>
+                              COMPLETE
+                            </div>
+                          )}
                           {/* 아랫줄: 승 선택 or 재채점 */}
                           {regradeGameId !== game.id ? (
                             <div style={{ display: "flex", gap: 4 }}>
