@@ -885,9 +885,11 @@ html, body {
 /* 월/년도 네비게이션 */
 .MuiPickersArrowSwitcher-button { color: var(--text-muted) !important; }
 .MuiPickersArrowSwitcher-button:hover { color: var(--accent) !important; }
-/* DatePicker 입력창 실제 글씨 흰색 */
-.MuiPickersSectionList-sectionContent,
-.MuiPickersSectionList-root,
-.MuiPickersInputBase-sectionsContainer span {
-  color: var(--text) !important;
-}
+/* 모바일 달력 글씨 흰색 */
+.MuiDialog-root .MuiPickersDay-root { color: var(--text) !important; }
+.MuiDialog-root .MuiPickersDay-root.Mui-selected { background: var(--accent) !important; color: #fff !important; }
+.MuiDialog-root .MuiPickersCalendarHeader-label { color: var(--text) !important; }
+.MuiDialog-root .MuiDayCalendar-weekDayLabel { color: var(--text) !important; }
+.MuiDialog-root .MuiPickersArrowSwitcher-button { color: var(--text-muted) !important; }
+.MuiDialog-root .MuiMultiSectionDigitalClockSection-item { color: var(--text) !important; }
+.MuiDialog-root .MuiMultiSectionDigitalClockSection-item.Mui-selected { background: var(--accent) !important; color: #fff !important; }
