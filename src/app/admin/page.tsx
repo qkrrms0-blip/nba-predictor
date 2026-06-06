@@ -417,17 +417,22 @@ export default function AdminPage() {
 
   const loadUserStats = useCallback(async (userId: string, seasonType: "regular" | "post") => {
     setStatsLoading(true);
+    setStatsData([]);
     const { data, error } = await supabase
       .from("votes")
       .select("voted_team, is_correct, games(home_team, away_team, season_type, winner)")
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .not("is_correct", "is", null); // 채점 완료된 것만
 
-    if (error || !data) { setStatsLoading(false); return; }
+    if (error) {
+      showToast("❌ 데이터 로드 실패: " + error.message);
+      setStatsLoading(false);
+      return;
+    }
+    if (!data || data.length === 0) { setStatsLoading(false); return; }
 
-    // 채점 완료된 것만, season_type 필터
-    const filtered = data.filter((v: any) =>
-      v.games?.season_type === seasonType && v.is_correct !== null
-    );
+    // season_type 필터
+    const filtered = data.filter((v: any) => v.games?.season_type === seasonType);
 
     // 팀별 집계
     const teamMap: Record<string, { total: number; correct: number }> = {};
@@ -440,8 +445,17 @@ export default function AdminPage() {
 
     const result = Object.entries(teamMap)
       .map(([team, s]) => ({ team, total: s.total, correct: s.correct, pct: Math.round(s.correct / s.total * 100) }))
-      .filter(d => d.total >= 2) // 2경기 이상만
-      .sort((a, b) => b.pct - a.pct || b.total - a.total);
+      .sort((a, b) => {
+        if (seasonType === "regular") {
+          // 정규: 맞춘수 내림 → 투표수 내림 → 퍼센트 내림
+          if (b.correct !== a.correct) return b.correct - a.correct;
+          if (b.total !== a.total) return b.total - a.total;
+          return b.pct - a.pct;
+        }
+        // 포스트: 퍼센트 내림 → 투표수 내림
+        if (b.pct !== a.pct) return b.pct - a.pct;
+        return b.total - a.total;
+      });
 
     setStatsData(result);
     setStatsLoading(false);
@@ -1216,7 +1230,9 @@ export default function AdminPage() {
                       </div>
                     ) : (() => {
                       const top3 = statsData.slice(0, 3);
-                      const bottom3 = [...statsData].reverse().slice(0, 3).reverse();
+                      const bottom3 = [...statsData].slice(-3);
+                      const isRegular = statsSeasonType === "regular";
+
                       const renderRow = (d: { team: string; total: number; correct: number; pct: number }, i: number, isTop: boolean) => (
                         <div key={d.team} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", borderBottom: "1px solid var(--border)" }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", width: 16, textAlign: "center", flexShrink: 0 }}>
@@ -1229,21 +1245,45 @@ export default function AdminPage() {
                             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {TEAMS.find(t => t.en === d.team)?.ko || d.team}
                             </div>
-                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{d.correct}/{d.total}경기</div>
+                            {isRegular && (
+                              <div style={{ fontSize: 11, color: isTop ? "var(--green)" : "#ef4444", fontWeight: 600, marginTop: 1 }}>
+                                {d.pct}%
+                              </div>
+                            )}
                           </div>
-                          <div style={{ fontWeight: 800, fontSize: 16, flexShrink: 0,
-                            color: isTop ? "var(--green)" : "#ef4444" }}>
-                            {d.pct}%
-                          </div>
+                          {isRegular ? (
+                            /* 정규: 오른쪽에 맞춘수/투표수 */
+                            <div style={{ flexShrink: 0, textAlign: "right" }}>
+                              <span style={{ fontWeight: 800, fontSize: 15, color: isTop ? "var(--green)" : "#ef4444" }}>
+                                {d.correct}
+                              </span>
+                              <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400 }}>
+                                /{d.total}
+                              </span>
+                            </div>
+                          ) : (
+                            /* 포스트: 오른쪽에 % */
+                            <div style={{ flexShrink: 0, textAlign: "right" }}>
+                              <div style={{ fontWeight: 800, fontSize: 16, color: isTop ? "var(--green)" : "#ef4444" }}>
+                                {d.pct}%
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{d.correct}/{d.total}</div>
+                            </div>
+                          )}
                         </div>
                       );
+
                       return (
                         <>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, letterSpacing: "0.05em" }}>상위 3팀</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, letterSpacing: "0.05em" }}>
+                            상위 3팀 {isRegular ? "· 맞춘수/투표수 순" : "· 적중률 순"}
+                          </div>
                           {top3.map((d, i) => renderRow(d, i, true))}
                           {statsData.length > 3 && (
                             <>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", margin: "14px 0 6px", letterSpacing: "0.05em" }}>하위 3팀</div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", margin: "14px 0 6px", letterSpacing: "0.05em" }}>
+                                하위 3팀
+                              </div>
                               {bottom3.map((d, i) => renderRow(d, statsData.length - bottom3.length + i, false))}
                             </>
                           )}
