@@ -885,16 +885,9 @@ html, body {
 /* 월/년도 네비게이션 */
 .MuiPickersArrowSwitcher-button { color: var(--text-muted) !important; }
 .MuiPickersArrowSwitcher-button:hover { color: var(--accent) !important; }
-/* DatePicker / DateTimePicker 입력창 글씨 흰색 */
-.MuiInputBase-input { color: var(--text) !important; }
-
-/* 달력 월/년도 헤더, 요일 글씨 흰색 */
-.MuiPickersCalendarHeader-label { color: var(--text) !important; }
-.MuiDayCalendar-weekDayLabel { color: var(--text) !important; }
-
-/* 디지털 시계 섹션 글씨 흰색 */
-.MuiMultiSectionDigitalClockSection-item { color: var(--text) !important; }
-.MuiMultiSectionDigitalClockSection-item.Mui-selected {
-  background: var(--accent) !important;
-  color: #fff !important;
+/* DatePicker 입력창 실제 글씨 흰색 */
+.MuiPickersSectionList-sectionContent,
+.MuiPickersSectionList-root,
+.MuiPickersInputBase-sectionsContainer span {
+  color: var(--text) !important;
 }
