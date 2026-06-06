@@ -8,7 +8,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -94,13 +93,6 @@ function defaultDeadline() {
 }
 
 const ITEMS_PER_PAGE = 10;
-
-const darkTheme = createTheme({
-  palette: {
-    mode: "dark",
-    primary: { main: "#f7501b" },
-  },
-});
 
 // MUI DatePicker 다크테마 스타일
 const muiInputSx = {
@@ -239,6 +231,25 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadData();
+  }, [tab]);
+
+  // seasons 테이블 realtime 구독 → cron 실행 시 자동 갱신
+  useEffect(() => {
+    if (tab !== "games") return;
+    const channel = supabase
+      .channel("seasons-sync")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "seasons" },
+        (payload) => {
+          const updated = payload.new as Season;
+          if (updated.last_espn_sync) {
+            setEspnLastSync(updated.last_espn_sync);
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [tab]);
 
   const loadData = async () => {
@@ -637,7 +648,6 @@ export default function AdminPage() {
                 <div style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                     <label className="form-label">시작일</label>
-                    <ThemeProvider theme={darkTheme}>
                     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
                       <DatePicker
                         value={dayjs(espnStartDate)}
@@ -652,11 +662,9 @@ export default function AdminPage() {
                         }}
                       />
                     </LocalizationProvider>
-                    </ThemeProvider>
                   </div>
                   <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
                     <label className="form-label">종료일</label>
-                    <ThemeProvider theme={darkTheme}>
                     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
                       <DatePicker
                         value={dayjs(espnEndDate)}
@@ -671,7 +679,6 @@ export default function AdminPage() {
                         }}
                       />
                     </LocalizationProvider>
-                    </ThemeProvider>
                   </div>
                 </div>
 
@@ -878,8 +885,7 @@ export default function AdminPage() {
                       {(["start_time", "vote_deadline"] as const).map((field) => (
                         <div key={field} className="form-group" style={{ flex: 1, minWidth: 0 }}>
                           <label className="form-label">{field === "start_time" ? "경기 시작시간" : "투표 마감시간"}</label>
-                          <ThemeProvider theme={darkTheme}>
-                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
                             <DateTimePicker
                               value={newGame[field]}
                               onChange={(d: Dayjs | null) => d && setNewGame({ ...newGame, [field]: d })}
@@ -895,7 +901,6 @@ export default function AdminPage() {
                               }}
                             />
                           </LocalizationProvider>
-                    </ThemeProvider>
                         </div>
                       ))}
                     </div>
