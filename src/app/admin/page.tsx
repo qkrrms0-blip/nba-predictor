@@ -98,7 +98,7 @@ const ITEMS_PER_PAGE = 10;
 const muiInputSx = {
   "& .MuiInputBase-root": {
     background: "var(--surface)",
-    color: "var(--text)",
+    color: "#ffffff",
     borderRadius: "8px",
     fontSize: 13,
   },
@@ -117,51 +117,10 @@ const muiInputSx = {
   "& .MuiInputBase-input": {
     fontSize: 13,
     padding: "8px 10px",
+    color: "#ffffff",
   },
-};
-
-// MUI 팝업(달력) 다크테마 slotProps
-const muiPopperSx = {
-  sx: {
-    "& .MuiPaper-root": {
-      background: "var(--surface)",
-      color: "var(--text)",
-      border: "1px solid var(--border)",
-    },
-    "& .MuiPickersCalendarHeader-label": { color: "var(--text)" },
-    "& .MuiDayCalendar-weekDayLabel": { color: "var(--text-muted)" },
-    "& .MuiPickersDay-root": { color: "var(--text)", background: "transparent" },
-    "& .MuiPickersDay-root:hover": { background: "var(--surface2)" },
-    "& .MuiPickersDay-root.Mui-selected": {
-      background: "var(--accent) !important",
-      color: "#fff",
-    },
-    "& .MuiPickersDay-today": {
-      border: "1px solid var(--accent) !important",
-    },
-    "& .MuiIconButton-root": { color: "var(--text-muted)" },
-    // 시간 선택 (Digital Clock / MultiSection)
-    "& .MuiMultiSectionDigitalClock-root": { color: "var(--text)" },
-    "& .MuiMultiSectionDigitalClockSection-root": {
-      color: "var(--text)",
-      "&::-webkit-scrollbar": { width: 4 },
-      "&::-webkit-scrollbar-thumb": { background: "var(--border)" },
-    },
-    "& .MuiMultiSectionDigitalClockSection-item": {
-      color: "var(--text)",
-      "&:hover": { background: "var(--surface2)" },
-      "&.Mui-selected": {
-        background: "var(--accent) !important",
-        color: "#fff !important",
-      },
-    },
-    "& .MuiDialogActions-root .MuiButton-root": { color: "var(--accent)" },
-    "& .MuiPickersLayout-contentWrapper": { color: "var(--text)" },
-    "& .MuiTypography-root": { color: "var(--text)" },
-    "& .MuiTabs-root": { borderBottom: "1px solid var(--border)" },
-    "& .MuiTab-root": { color: "var(--text-muted)" },
-    "& .MuiTab-root.Mui-selected": { color: "var(--accent)" },
-    "& .MuiTabs-indicator": { background: "var(--accent)" },
+  "& .MuiInputBase-root input": {
+    color: "#ffffff !important",
   },
 };
 
@@ -685,7 +644,6 @@ export default function AdminPage() {
                             sx: muiInputSx,
                             style: { width: "100%" },
                           },
-                          popper: muiPopperSx,
                         }}
                       />
                     </LocalizationProvider>
@@ -703,7 +661,6 @@ export default function AdminPage() {
                             sx: muiInputSx,
                             style: { width: "100%" },
                           },
-                          popper: muiPopperSx,
                         }}
                       />
                     </LocalizationProvider>
@@ -920,22 +877,11 @@ export default function AdminPage() {
                               format="YY/MM/DD A hh:mm"
                               ampm={true}
                               minutesStep={10}
-                              timeSteps={{ hours: 1, minutes: 10 }}
                               slotProps={{
                                 textField: {
                                   size: "small",
                                   sx: muiInputSx,
                                   style: { width: "100%" },
-                                },
-                                popper: muiPopperSx,
-                                digitalClockSectionItem: {
-                                  sx: {
-                                    color: "var(--text)",
-                                    "&.Mui-selected": {
-                                      background: "var(--accent) !important",
-                                      color: "#fff !important",
-                                    },
-                                  },
                                 },
                               }}
                             />
