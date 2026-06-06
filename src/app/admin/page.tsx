@@ -698,31 +698,35 @@ export default function AdminPage() {
                         <div className="card" style={{ padding: "8px 10px", marginBottom: 0 }}>
                         <div style={{ display: "flex", alignItems: "center" }}>
 
-                          {/* 좌: 고정폭 — 라운드+pt 한 줄, 아래 날짜시간 */}
-                          <div style={{ width: 110, flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-                            <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
-                              <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                {game.round}
+                          {/* 좌: 라운드+pt (투표탭 동일 스타일) */}
+                          <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                              <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
+                                {game.round.replace(" ", "\n")}
                               </span>
                               {pts && (
-                                <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                                <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
                                   {pts}pt
                                 </span>
                               )}
                             </div>
+                          </div>
+
+                          {/* 중: 날짜시간 위 + 로고 vs 로고 */}
+                          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
                             <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                               {format(new Date(game.start_time), "M/d HH:mm")}
                             </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
+                                style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                              <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
+                              <img src={getTeamLogoUrl(game.away_team)} alt={getTeamAbbr(game.away_team)}
+                                style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                            </div>
                           </div>
-
-                          {/* 중: 항상 같은 위치 — 약어 vs 약어 */}
-                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
-                            <span>{getTeamAbbr(game.home_team)}</span>
-                            <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
-                            <span>{getTeamAbbr(game.away_team)}</span>
-                          </div>
-
-                          {/* 우: 삭제 / 홈약어 원정약어 */}
                           <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                             <button onClick={() => deleteGame(game.id)}
                               style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
@@ -979,28 +983,34 @@ export default function AdminPage() {
                     <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
                       <div style={{ display: "flex", alignItems: "center" }}>
 
-                        {/* 좌: 고정폭 — 라운드+pt 한 줄, 아래 날짜시간 */}
-                        <div style={{ width: 110, flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-                          <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
-                            <span style={{ fontSize: 10, background: "rgba(99,102,241,0.15)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 4, padding: "1px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>
-                              {game.round}
+                        {/* 좌: 라운드+pt (투표탭 동일 스타일) */}
+                        <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                            <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
+                              {game.round.replace(" ", "\n")}
                             </span>
                             {ROUND_POINTS[game.round] && (
-                              <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                              <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
                                 {ROUND_POINTS[game.round]}pt
                               </span>
                             )}
                           </div>
+                        </div>
+
+                        {/* 중: 날짜시간 위 + 로고 vs 로고 */}
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
                           <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                             {format(new Date(game.start_time), "M/d HH:mm")}
                           </span>
-                        </div>
-
-                        {/* 중: 항상 같은 위치 — 약어 vs 약어 */}
-                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
-                          <span>{getTeamAbbr(game.home_team)}</span>
-                          <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
-                          <span>{getTeamAbbr(game.away_team)}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
+                              style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                              onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                            <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11 }}>vs</span>
+                            <img src={getTeamLogoUrl(game.away_team)} alt={getTeamAbbr(game.away_team)}
+                              style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                              onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                          </div>
                         </div>
 
                         {/* 우: 채점완료+삭제 / 승선택 */}
