@@ -46,6 +46,18 @@ export default function HistoryPage() {
   const [centeredMonthIndex, setCenteredMonthIndex] = useState(0);
   const isScrollingProgrammatically = useRef(false);
 
+  // 페이지네이션
+  const GAMES_PER_PAGE = 5;
+  const [pageIndex, setPageIndex] = useState(0);
+  const totalPagesRef = useRef(1);
+  const wheelCooldown = useRef(false);
+  const touchStartX = useRef<number | null>(null);
+  const mouseStartXPage = useRef<number | null>(null);
+
+  // 월 캐러셀 마우스 드래그
+  const monthMouseStartX = useRef<number | null>(null);
+  const monthMouseStartScroll = useRef(0);
+
   // 시즌 목록 초기 로드
   useEffect(() => {
     const init = async () => {
@@ -75,10 +87,11 @@ export default function HistoryPage() {
     loadSeasonGames(selectedSeason);
   }, [selectedSeason]);
 
-  const loadSeasonGames = async (seasonId: number) => {
+  const loadSeasonGames = async (seasonId: number, typeOverride?: "regular" | "post") => {
     setLoading(true);
     setFilterMonth(null);
     setFilterDay(null);
+    setPageIndex(0);
 
     const { data: { user } } = await supabase.auth.getUser();
     const currentUserId = user?.id || userId;
@@ -119,9 +132,33 @@ export default function HistoryPage() {
     });
 
     setAllSeasonGames(results);
-    setGameResults(results);
+
+    // 현재 seasonType 기준 필터링 후 최신 날짜 자동 선택
+    const curType = typeOverride ?? seasonTypeFilter;
+    const typeFiltered = results.filter((g) => !g.season_type || g.season_type === curType);
+    autoSelectLatest(typeFiltered, curType, results);
     setLoading(false);
   };
+
+  // 최신 경기 날짜로 월+일 자동 선택
+  const autoSelectLatest = useCallback((typeFiltered: GameResult[], type: "regular" | "post", allResults?: GameResult[]) => {
+    if (typeFiltered.length === 0) return;
+    const latest = typeFiltered[0]; // 내림차순이므로 첫 번째가 최신
+    const latestMonth = format(new Date(latest.start_time), "MM");
+    const latestDay = String(new Date(latest.start_time).getDate());
+
+    setFilterMonth(latestMonth);
+    setFilterDay(latestDay);
+    setPageIndex(0);
+
+    // 월 캐러셀도 해당 월로 이동
+    const monthList = type === "regular" ? ["10","11","12","01","02","03","04"] : ["04","05","06"];
+    const idx = monthList.indexOf(latestMonth);
+    if (idx >= 0) {
+      setCenteredMonthIndex(idx);
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollToIndex(idx)));
+    }
+  }, []);
 
   // seasonType 필터링된 경기
   const seasonFilteredGames = allSeasonGames.filter(
@@ -157,12 +194,14 @@ export default function HistoryPage() {
       new Set(monthGames.map((g) => new Date(g.start_time).getDate()))
     ).sort((a, b) => a - b);
     setDaysWithGames(days);
-    setFilterDay(null);
+    // filterDay가 없을 때만 자동으로 최신 날짜 선택
+    setFilterDay((prev) => prev ?? (days.length > 0 ? String(days[days.length - 1]) : null));
     setGameResults(monthGames);
   }, [filterMonth, allSeasonGames, seasonTypeFilter]);
 
   // 날짜 선택 시 필터링
   useEffect(() => {
+    setPageIndex(0);
     if (!filterMonth) return;
     if (filterDay === null) {
       setGameResults(seasonFilteredGames.filter((g) => format(new Date(g.start_time), "MM") === filterMonth));
@@ -187,14 +226,6 @@ export default function HistoryPage() {
   };
 
   const months = seasonTypeFilter === "regular" ? regularMonths : postMonths;
-
-  // 초기 스크롤: 정규는 현재 달 기준, POST는 그냥 중앙
-  const getInitialIndex = useCallback((type: "regular" | "post") => {
-    if (type === "post") return 1; // 3개뿐이라 중앙 고정
-    const nowMonth = String(new Date().getMonth() + 1).padStart(2, "0");
-    const idx = regularMonths.indexOf(nowMonth);
-    return idx >= 0 ? idx : 0;
-  }, []);
 
   // 캐러셀 스크롤 후 중앙 인덱스 감지
   const onMonthScroll = useCallback(() => {
@@ -228,18 +259,69 @@ export default function HistoryPage() {
     setTimeout(() => { isScrollingProgrammatically.current = false; }, 400);
   }, []);
 
-  // seasonType 바뀔 때 초기 위치로
+  // seasonType 바뀔 때 해당 타입의 최신 경기 날짜로 자동 선택
   useEffect(() => {
-    const idx = getInitialIndex(seasonTypeFilter);
-    setCenteredMonthIndex(idx);
-    // DOM 반영 후 스크롤
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => scrollToIndex(idx));
-    });
+    setFilterMonth(null);
+    setFilterDay(null);
+    setPageIndex(0);
+    if (allSeasonGames.length === 0) return;
+    const typeFiltered = allSeasonGames.filter((g) => !g.season_type || g.season_type === seasonTypeFilter);
+    autoSelectLatest(typeFiltered, seasonTypeFilter);
   }, [seasonTypeFilter]);
 
-  // 월 버튼 클릭
-  const handleMonthClick = (m: string, idx: number) => {
+  // 월 캐러셀 마우스 드래그 (PC)
+  const handleMonthMouseDown = (e: React.MouseEvent) => {
+    monthMouseStartX.current = e.clientX;
+    monthMouseStartScroll.current = monthScrollRef.current?.scrollLeft ?? 0;
+  };
+  const handleMonthMouseMove = (e: React.MouseEvent) => {
+    if (monthMouseStartX.current === null) return;
+    const el = monthScrollRef.current;
+    if (!el) return;
+    el.scrollLeft = monthMouseStartScroll.current - (e.clientX - monthMouseStartX.current);
+  };
+  const handleMonthMouseUp = () => { monthMouseStartX.current = null; };
+
+  // 페이지 네비게이션 — window 이벤트
+  const goNext = useCallback(() => setPageIndex((p) => { const n = Math.min(p + 1, totalPagesRef.current - 1); return n; }), []);
+  const goPrev = useCallback(() => setPageIndex((p) => Math.max(p - 1, 0)), []);
+
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (touchStartX.current === null) return;
+      const diff = touchStartX.current - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 40) diff > 0 ? goNext() : goPrev();
+      touchStartX.current = null;
+    };
+    const onMouseDown = (e: MouseEvent) => { mouseStartXPage.current = e.clientX; };
+    const onMouseUp = (e: MouseEvent) => {
+      if (mouseStartXPage.current === null) return;
+      const diff = mouseStartXPage.current - e.clientX;
+      if (Math.abs(diff) > 40) diff > 0 ? goNext() : goPrev();
+      mouseStartXPage.current = null;
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (totalPagesRef.current <= 1) return;
+      if (wheelCooldown.current) return;
+      if (Math.abs(e.deltaY) < 30) return;
+      wheelCooldown.current = true;
+      e.deltaY > 0 ? goNext() : goPrev();
+      setTimeout(() => { wheelCooldown.current = false; }, 600);
+    };
+    window.addEventListener("touchstart", onTouchStart);
+    window.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("wheel", onWheel);
+    };
+  }, [goNext, goPrev]);
     scrollToIndex(idx);
     setFilterMonth(filterMonth === m ? null : m);
     setFilterDay(null);
@@ -247,7 +329,7 @@ export default function HistoryPage() {
   // ────────────────────────────────────────────────────
 
   return (
-    <>
+    <div style={{ userSelect: "none" }}>
       {/* ── 상단 고정 필터 바 ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
 
@@ -288,6 +370,10 @@ export default function HistoryPage() {
         <div
           ref={monthScrollRef}
           onScroll={onMonthScroll}
+          onMouseDown={handleMonthMouseDown}
+          onMouseMove={handleMonthMouseMove}
+          onMouseUp={handleMonthMouseUp}
+          onMouseLeave={handleMonthMouseUp}
           style={{
             display: "flex",
             alignItems: "center",
@@ -296,6 +382,8 @@ export default function HistoryPage() {
             scrollbarWidth: "none",
             scrollSnapType: "x mandatory",
             WebkitOverflowScrolling: "touch",
+            cursor: "grab",
+            userSelect: "none",
           }}
         >
           {/* 앞 스페이서: 첫 아이템도 중앙에 올 수 있게 */}
@@ -478,8 +566,26 @@ export default function HistoryPage() {
           <div className="empty-icon">📋</div>
           <div className="empty-title">채점된 경기가 없습니다</div>
         </div>
-      ) : (
-        gameResults.map((game) => {
+      ) : (() => {
+        const totalPages = Math.min(Math.ceil(gameResults.length / GAMES_PER_PAGE), 3);
+        totalPagesRef.current = totalPages;
+        const pagedGames = gameResults.slice(pageIndex * GAMES_PER_PAGE, (pageIndex + 1) * GAMES_PER_PAGE);
+        return (
+          <>
+            {/* 점 네비게이션 */}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, padding: "4px 0 2px" }}>
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button key={i} onClick={() => setPageIndex(i)} style={{
+                    width: i === pageIndex ? 7 : 5, height: i === pageIndex ? 7 : 5,
+                    borderRadius: "50%",
+                    background: i === pageIndex ? "var(--text)" : "rgba(150,150,150,0.5)",
+                    border: "none", padding: 0, cursor: "pointer", transition: "all 0.2s", flexShrink: 0,
+                  }} />
+                ))}
+              </div>
+            )}
+            {pagedGames.map((game) => {
           const homeAbbr = game.home_team.split(" ").slice(-1)[0];
           const awayAbbr = game.away_team.split(" ").slice(-1)[0];
 
@@ -570,8 +676,10 @@ export default function HistoryPage() {
               )}
             </div>
           );
-        })
-      )}
-    </>
+        })}
+          </>
+        );
+      })()}
+    </div>
   );
 }
