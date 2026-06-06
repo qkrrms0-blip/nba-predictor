@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import React from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { Season } from "@/lib/types";
@@ -322,6 +323,9 @@ export default function HistoryPage() {
       window.removeEventListener("wheel", onWheel);
     };
   }, [goNext, goPrev]);
+
+  // 월 버튼 클릭
+  const handleMonthClick = (m: string, idx: number) => {
     scrollToIndex(idx);
     setFilterMonth(filterMonth === m ? null : m);
     setFilterDay(null);
@@ -566,120 +570,120 @@ export default function HistoryPage() {
           <div className="empty-icon">📋</div>
           <div className="empty-title">채점된 경기가 없습니다</div>
         </div>
-      ) : (() => {
-        const totalPages = Math.min(Math.ceil(gameResults.length / GAMES_PER_PAGE), 3);
-        totalPagesRef.current = totalPages;
-        const pagedGames = gameResults.slice(pageIndex * GAMES_PER_PAGE, (pageIndex + 1) * GAMES_PER_PAGE);
+      ) : (
+        <PaginatedGames
+          gameResults={gameResults}
+          pageIndex={pageIndex}
+          setPageIndex={setPageIndex}
+          totalPagesRef={totalPagesRef}
+          GAMES_PER_PAGE={GAMES_PER_PAGE}
+          expandedGame={expandedGame}
+          setExpandedGame={setExpandedGame}
+          userId={userId}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── 페이지네이션 게임 목록 컴포넌트 ──────────────────────────
+function PaginatedGames({ gameResults, pageIndex, setPageIndex, totalPagesRef, GAMES_PER_PAGE, expandedGame, setExpandedGame, userId }: {
+  gameResults: GameResult[];
+  pageIndex: number;
+  setPageIndex: (i: number) => void;
+  totalPagesRef: React.MutableRefObject<number>;
+  GAMES_PER_PAGE: number;
+  expandedGame: number | null;
+  setExpandedGame: (id: number | null) => void;
+  userId: string;
+}) {
+  const totalPages = Math.min(Math.ceil(gameResults.length / GAMES_PER_PAGE), 3);
+  totalPagesRef.current = totalPages;
+  const pagedGames = gameResults.slice(pageIndex * GAMES_PER_PAGE, (pageIndex + 1) * GAMES_PER_PAGE);
+
+  return (
+    <>
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, padding: "4px 0 2px" }}>
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button key={i} onClick={() => setPageIndex(i)} style={{
+              width: i === pageIndex ? 7 : 5, height: i === pageIndex ? 7 : 5,
+              borderRadius: "50%",
+              background: i === pageIndex ? "var(--text)" : "rgba(150,150,150,0.5)",
+              border: "none", padding: 0, cursor: "pointer", transition: "all 0.2s", flexShrink: 0,
+            }} />
+          ))}
+        </div>
+      )}
+      {pagedGames.map((game) => {
+        const homeAbbr = game.home_team.split(" ").slice(-1)[0];
+        const awayAbbr = game.away_team.split(" ").slice(-1)[0];
+        let borderColor = "var(--border)";
+        if (game.myIsCorrect === true) borderColor = "#3b82f6";
+        else if (game.myIsCorrect === false) borderColor = "#ef4444";
+
         return (
-          <>
-            {/* 점 네비게이션 */}
-            {totalPages > 1 && (
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, padding: "4px 0 2px" }}>
-                {Array.from({ length: totalPages }).map((_, i) => (
-                  <button key={i} onClick={() => setPageIndex(i)} style={{
-                    width: i === pageIndex ? 7 : 5, height: i === pageIndex ? 7 : 5,
-                    borderRadius: "50%",
-                    background: i === pageIndex ? "var(--text)" : "rgba(150,150,150,0.5)",
-                    border: "none", padding: 0, cursor: "pointer", transition: "all 0.2s", flexShrink: 0,
-                  }} />
-                ))}
+          <div key={game.id} style={{
+            background: "var(--surface)",
+            border: `1.5px solid ${borderColor}`,
+            borderRadius: "var(--radius)",
+            padding: "8px 12px",
+            marginBottom: 8,
+            transition: "border-color 0.2s",
+          }}>
+            {/* 3컬럼 메인 행 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              {/* 좌: 라운드 + 날짜시간 */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0, minWidth: 72 }}>
+                {game.round && <span className="round-badge" style={{ fontSize: 10, padding: "2px 6px" }}>{game.round}</span>}
+                <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                  {format(new Date(game.start_time), "M/d HH:mm")}
+                </span>
               </div>
-            )}
-            {pagedGames.map((game) => {
-          const homeAbbr = game.home_team.split(" ").slice(-1)[0];
-          const awayAbbr = game.away_team.split(" ").slice(-1)[0];
-
-          let borderColor = "var(--border)";
-          if (game.myIsCorrect === true) borderColor = "#3b82f6";
-          else if (game.myIsCorrect === false) borderColor = "#ef4444";
-
-          return (
-            <div key={game.id} style={{
-              background: "var(--surface)",
-              border: `1.5px solid ${borderColor}`,
-              borderRadius: "var(--radius)",
-              padding: "8px 12px",
-              marginBottom: 8,
-              transition: "border-color 0.2s",
-            }}>
-              {/* 3컬럼 메인 행 */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-
-                {/* 좌: 라운드 + 날짜시간 */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0, minWidth: 72 }}>
-                  {game.round && <span className="round-badge" style={{ fontSize: 10, padding: "2px 6px" }}>{game.round}</span>}
-                  <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                    {format(new Date(game.start_time), "M/d HH:mm")}
-                  </span>
-                </div>
-
-                {/* 중: 홈로고 점수 VS 점수 원정로고 */}
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                  <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
-                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                  <span style={{
-                    fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
-                    color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)",
-                  }}>
-                    {game.home_score ?? "-"}
-                  </span>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>VS</span>
-                  <span style={{
-                    fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
-                    color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)",
-                  }}>
-                    {game.away_score ?? "-"}
-                  </span>
-                  <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
-                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", flexShrink: 0 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                </div>
-
-                {/* 우: 완료뱃지 */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
-                  <span className="badge badge-correct">완료</span>
-                </div>
-
+              {/* 중: 홈로고 점수 VS 점수 원정로고 */}
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
+                  style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "home" ? 0.35 : 1, flexShrink: 0 }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
+                  {game.home_score ?? "-"}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>VS</span>
+                <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
+                  {game.away_score ?? "-"}
+                </span>
+                <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
+                  style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "away" ? 0.35 : 1, flexShrink: 0 }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
               </div>
+              {/* 우: 완료뱃지 */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
+                <span className="badge badge-correct">완료</span>
+              </div>
+            </div>
 
-              {/* 적중자 */}
-              {game.correctCount === 0 ? (
-                <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic", marginTop: 6, textAlign: "center" }}>
-                  아무도 맞추지 못했습니다
-                </div>
-              ) : (
-                <div style={{ marginTop: 6 }}>
-                  <button
-                    onClick={() => setExpandedGame(expandedGame === game.id ? null : game.id)}
-                    style={{
-                      width: "100%", textAlign: "left", background: "var(--surface2)",
-                      border: "1px solid var(--border)", borderRadius: 8,
-                      padding: "5px 10px", fontSize: 12, color: "var(--text-muted)", cursor: "pointer",
-                    }}>
-                    적중자 {game.correctCount}명 {expandedGame === game.id ? "▲" : "▼"}
-                  </button>
-                  {expandedGame === game.id && (
-                    <div style={{
-                      marginTop: 6, padding: "6px 10px",
-                      background: "rgba(34,197,94,0.08)",
-                      borderRadius: 6, fontSize: 13, lineHeight: 1.8,
-                    }}>
-                      {game.correctVoters.map((voter, i) => (
-                        <span key={i}>
-                          {voter.name}{i < game.correctVoters.length - 1 ? "\u00A0 " : ""}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+            {/* 적중자 */}
+            <div style={{ marginTop: 6 }}>
+              <button
+                onClick={() => setExpandedGame(expandedGame === game.id ? null : game.id)}
+                style={{
+                  width: "100%", textAlign: "left", background: "var(--surface2)",
+                  border: "1px solid var(--border)", borderRadius: 8,
+                  padding: "5px 10px", fontSize: 12, color: "var(--text-muted)", cursor: "pointer",
+                }}>
+                적중자 {game.correctCount}명 {expandedGame === game.id ? "▲" : "▼"}
+              </button>
+              {expandedGame === game.id && game.correctCount > 0 && (
+                <div style={{ marginTop: 6, padding: "6px 10px", background: "rgba(34,197,94,0.08)", borderRadius: 6, fontSize: 13, lineHeight: 1.8 }}>
+                  {game.correctVoters.map((voter, i) => (
+                    <span key={i}>{voter.name}{i < game.correctVoters.length - 1 ? "\u00A0 " : ""}</span>
+                  ))}
                 </div>
               )}
             </div>
-          );
-        })}
-          </>
+          </div>
         );
-      })()}
-    </div>
+      })}
+    </>
   );
 }
