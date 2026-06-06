@@ -646,29 +646,31 @@ function PaginatedGames({ gameResults, pageIndex, setPageIndex, totalPagesRef, G
                   )}
                 </div>
               </div>
-              {/* 중: 홈로고 점수 : 점수 원정로고 + 시간 VS위에 */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  {format(new Date(game.start_time), "M/d HH:mm")}
-                </span>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                  <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
-                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "home" ? 0.35 : 1, flexShrink: 0 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                  <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
-                    {game.home_score ?? "-"}
+              {/* 중: 홈로고 점수 : 점수 원정로고, 날짜시간은 점수 바로 위 */}
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <img src={getTeamLogoUrl(game.home_team)} alt={homeAbbr}
+                  style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "home" ? 0.35 : 1, flexShrink: 0 }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                    {format(new Date(game.start_time), "M/d HH:mm")}
                   </span>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>:</span>
-                  <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
-                    {game.away_score ?? "-"}
-                  </span>
-                  <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
-                    style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "away" ? 0.35 : 1, flexShrink: 0 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
+                      {game.home_score ?? "-"}
+                    </span>
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>:</span>
+                    <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
+                      {game.away_score ?? "-"}
+                    </span>
+                  </div>
                 </div>
+                <img src={getTeamLogoUrl(game.away_team)} alt={awayAbbr}
+                  style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "away" ? 0.35 : 1, flexShrink: 0 }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
               </div>
-              {/* 우: 완료뱃지 */}
-              <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {/* 우: 완료뱃지 (원래 그대로) */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
                 <span className="badge badge-correct">완료</span>
               </div>
             </div>
