@@ -298,18 +298,18 @@ export default function AdminPage() {
     setAllGames(data || []);
   };
 
-  // 선택된 월의 경기 필터링
+  // 선택된 월의 경기 필터링 — 최신 날짜 자동 선택
   useEffect(() => {
     if (!filterMonth) return;
     const monthGames = allGames.filter((g) => {
       const d = new Date(g.start_time);
-      return format(d, "MM") === filterMonth;
+      return format(d, "MM") === filterMonth && (!g.season_type || g.season_type === completedSeasonType);
     });
     const days = Array.from(new Set(monthGames.map((g) => new Date(g.start_time).getDate()))).sort((a, b) => a - b);
     setDaysWithGames(days);
-    setFilterDay(null);
+    setFilterDay(days.length > 0 ? String(days[days.length - 1]) : null);
     setGamePage(1);
-  }, [filterMonth, allGames]);
+  }, [filterMonth, allGames, completedSeasonType]);
 
   // 표시할 경기 목록 계산
   // 달력용 날짜별 경기 수
@@ -323,6 +323,7 @@ export default function AdminPage() {
     const d = new Date(dateStr);
     setFilterMonth(format(d, "MM"));
     setFilterDay(String(d.getDate()));
+    setMonthClicked(true);
     setCalendarOpen(false);
     setGamePage(1);
   };
@@ -759,7 +760,7 @@ export default function AdminPage() {
                         <button className="btn-primary" style={{ width: "100%" }}
                           onClick={() => { setEspnPickerOpen(false); syncESPN(); }}
                           disabled={espnLoading}>
-                          {espnLoading ? "가져오는 중..." : "가져오기"}
+                          {espnLoading ? "등록 중..." : "등록하기"}
                         </button>
                       </div>
                     </div>
@@ -974,7 +975,7 @@ export default function AdminPage() {
                 {completedSectionOpen && <>
 
                   {/* history 스타일 필터 바 */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 8 }}>
                     <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
                       {(["regular", "post"] as const).map((type) => (
                         <button key={type}
@@ -989,28 +990,33 @@ export default function AdminPage() {
                       ))}
                     </div>
                     <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
-                    {(completedSeasonType === "regular"
-                      ? ["10", "11", "12", "01", "02", "03", "04"]
-                      : ["04", "05", "06"]
-                    ).map((m) => {
-                      const labels: Record<string, string> = { "01": "1월", "02": "2월", "03": "3월", "04": "4월", "05": "5월", "06": "6월", "10": "10월", "11": "11월", "12": "12월" };
-                      return (
-                        <button key={m} onClick={() => {
-                          if (filterMonth === m) { setMonthClicked(true); return; }
-                          setFilterMonth(m); setFilterDay(null); setGamePage(1); setMonthClicked(true);
-                        }}
-                          style={{
-                            flexShrink: 0, padding: "5px 10px", borderRadius: 20,
-                            background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
-                            color: filterMonth === m ? "#fff" : "var(--text-muted)",
-                            border: filterMonth === m ? "none" : "1px solid var(--border)",
-                            fontWeight: 600, fontSize: 12, cursor: "pointer"
-                          }}>
-                          {labels[m]}
-                        </button>
-                      );
-                    })}
-                    <button onClick={() => setCalendarOpen(!calendarOpen)}
+                    {/* 월 캐러셀 — 3개 너비 고정 */}
+                    <div style={{ width: "calc(3 * 44px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
+                      <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+                        {(completedSeasonType === "regular"
+                          ? ["10", "11", "12", "01", "02", "03", "04"]
+                          : ["04", "05", "06"]
+                        ).map((m) => {
+                          const labels: Record<string, string> = { "01": "1월", "02": "2월", "03": "3월", "04": "4월", "05": "5월", "06": "6월", "10": "10월", "11": "11월", "12": "12월" };
+                          return (
+                            <button key={m} onClick={() => {
+                              if (filterMonth === m) { setMonthClicked((prev) => !prev); return; }
+                              setFilterMonth(m); setFilterDay(null); setGamePage(1); setMonthClicked(true);
+                            }}
+                              style={{
+                                flexShrink: 0, padding: "3px 8px", borderRadius: 20,
+                                background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
+                                color: filterMonth === m ? "#fff" : "var(--text-muted)",
+                                border: filterMonth === m ? "none" : "1px solid var(--border)",
+                                fontWeight: 600, fontSize: 12, cursor: "pointer"
+                              }}>
+                              {labels[m]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <button ref={calendarBtnRef} onClick={() => setCalendarOpen(!calendarOpen)}
                       style={{
                         marginLeft: "auto", flexShrink: 0, width: 32, height: 32, borderRadius: 8,
                         border: "1.5px solid var(--accent)",
@@ -1022,9 +1028,18 @@ export default function AdminPage() {
                     </button>
                   </div>
 
-                  {/* 달력 패널 */}
+                  {/* 달력 팝업 */}
                   {calendarOpen && (
-                    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px", marginBottom: 10 }}>
+                    <>
+                      <div onClick={() => setCalendarOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+                      <div style={{
+                        position: "fixed",
+                        top: (() => { const btn = calendarBtnRef.current; if (!btn) return 60; return btn.getBoundingClientRect().bottom + 6; })(),
+                        right: 12, zIndex: 100,
+                        background: "var(--surface)", border: "1px solid var(--border)",
+                        borderRadius: "var(--radius)", padding: "12px",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.4)", width: 280,
+                      }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                         <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
                           style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>‹</button>
@@ -1067,24 +1082,13 @@ export default function AdminPage() {
                           return cells;
                         })()}
                       </div>
-                    </div>
+                      </div>
+                    </>
                   )}
 
                   {/* 일 캐러셀 (월 클릭 후 표시) */}
                   {monthClicked && daysWithGames.length > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                      {/* 전체 버튼 고정 */}
-                      <button onClick={() => { setFilterDay(null); setGamePage(1); }}
-                        style={{
-                          flexShrink: 0, padding: "4px 10px", borderRadius: 8,
-                          background: filterDay === null ? "var(--accent2)" : "transparent",
-                          color: filterDay === null ? "#fff" : "var(--text-muted)",
-                          border: filterDay === null ? "2px solid var(--accent2)" : "2px solid var(--border)",
-                          fontWeight: 700, fontSize: 11, cursor: "pointer", transition: "all 0.15s",
-                          display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
-                        }}>
-                        전체
-                      </button>
                       {/* 일 캐러셀 — 3일치 너비 고정 */}
                       <div style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
                         <div
