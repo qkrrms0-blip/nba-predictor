@@ -189,7 +189,7 @@ export default function RankingPage() {
                       {entry.correct_votes}/{entry.total_votes} · {entry.accuracy_pct}%
                     </div>
                   </div>
-                  <div className="rank-points" style={{ fontSize: 13, whiteSpace: "nowrap" }}>{entry.total_points}</div>
+                  <div className="rank-points" style={{ fontSize: 20, fontWeight: 700, whiteSpace: "nowrap", lineHeight: 1 }}>{entry.total_points}</div>
                 </div>
 
                 {/* 오른쪽 카드 (없으면 빈 칸) */}
@@ -216,7 +216,7 @@ export default function RankingPage() {
                         {rightEntry.correct_votes}/{rightEntry.total_votes} · {rightEntry.accuracy_pct}%
                       </div>
                     </div>
-                    <div className="rank-points" style={{ fontSize: 13, whiteSpace: "nowrap" }}>{rightEntry.total_points}</div>
+                    <div className="rank-points" style={{ fontSize: 20, fontWeight: 700, whiteSpace: "nowrap", lineHeight: 1 }}>{rightEntry.total_points}</div>
                   </div>
                 ) : (
                   <div />
