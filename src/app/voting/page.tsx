@@ -116,6 +116,8 @@ export default function VotingPage() {
   // 투표 현황 — 마감 전 경기 기준
   const [myVoteCount, setMyVoteCount] = useState(0);
   const [totalVotableCount, setTotalVotableCount] = useState(0);
+  // 날짜탭: 경기 있는 날짜 offset set
+  const [gameDateOffsets, setGameDateOffsets] = useState<Set<number>>(new Set());
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -294,6 +296,16 @@ export default function VotingPage() {
 
     setTotalVotableCount(votableIds.size);
     setMyVoteCount((myVotes ?? []).filter((v: any) => votableIds.has(v.game_id)).length);
+
+    // 날짜탭: 경기 있는 offset 계산 (오늘 기준 0~3)
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const offsets = new Set<number>();
+    gamesData.forEach((g: any) => {
+      const d = new Date(g.start_time); d.setHours(0, 0, 0, 0);
+      const diff = Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff <= 3) offsets.add(diff);
+    });
+    setGameDateOffsets(offsets);
   }, []);
 
   useEffect(() => { loadTopRankers(); }, [loadTopRankers]);
@@ -397,7 +409,7 @@ export default function VotingPage() {
                 onClick={() => setDateOffset(tab.offset)}
               >
                 {tab.label}
-                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 1 }}>{dateStr}</span>
+                <span style={{ display: "block", fontSize: 10, marginTop: 1, opacity: gameDateOffsets.has(tab.offset) ? 1 : 0.7, color: gameDateOffsets.has(tab.offset) ? "#ffffff" : undefined }}>{dateStr}</span>
               </button>
             );
           })}
@@ -546,7 +558,8 @@ export default function VotingPage() {
                         closed
                           ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>투표 마감</span>
                           : <span style={{ fontSize: 14, color: "#ef4444", whiteSpace: "nowrap" }}>
-                            마감 {format(new Date(game.vote_deadline), "M/d HH:mm")}
+                            <span style={{ fontSize: 10, fontWeight: 400 }}>마감</span>{" "}
+                            <span style={{ fontSize: 14, fontWeight: 700 }}>{format(new Date(game.vote_deadline), "M/d HH:mm")}</span>
                           </span>
                       ) : null}
                     </div>
