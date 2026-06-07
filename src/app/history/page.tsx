@@ -602,8 +602,8 @@ export default function HistoryPage() {
             전체
           </button>
 
-          {/* 일 캐러셀 */}
-          <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+          {/* 일 캐러셀 — 3일치 너비 고정 */}
+          <div style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
             <div
               ref={dayScrollRef}
               onMouseDown={handleDayMouseDown}

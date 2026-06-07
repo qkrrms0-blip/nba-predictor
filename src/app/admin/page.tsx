@@ -93,7 +93,7 @@ function defaultDeadline() {
   return format(d, "yyyy-MM-dd'T'HH:mm");
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 const darkTheme = createTheme({
   palette: {
@@ -229,7 +229,14 @@ export default function AdminPage() {
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [monthClicked, setMonthClicked] = useState(false);
   const [endSeasonModal, setEndSeasonModal] = useState<number | null>(null);
+
+  // 일 캐러셀 refs
+  const dayScrollRef = useRef<HTMLDivElement>(null);
+  const dayMouseStartX = useRef<number | null>(null);
+  const dayMouseStartScroll = useRef(0);
+  const calendarBtnRef = useRef<HTMLButtonElement>(null);
   const [endSeasonModalInput, setEndSeasonModalInput] = useState("");
 
   const showToast = (msg: string) => {
@@ -792,8 +799,9 @@ export default function AdminPage() {
 
                           {/* 중: 날짜시간 위 + 로고 [vs] 로고 */}
                           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                            <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                              {format(new Date(game.start_time), "M/d HH:mm")}
+                            <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>
+                              <span style={{ color: "#ffffff" }}>{format(new Date(game.start_time), "M/d")}</span>
+                              <span style={{ color: "var(--text-muted)" }}> {format(new Date(game.start_time), "HH:mm")}</span>
                             </span>
                             <div style={{ display: "flex", alignItems: "center" }}>
                               <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
@@ -959,7 +967,7 @@ export default function AdminPage() {
                 <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
                   {(["regular", "post"] as const).map((type) => (
                     <button key={type}
-                      onClick={() => { setCompletedSeasonType(type); setFilterMonth(format(new Date(), "MM")); setFilterDay(null); setGamePage(1); }}
+                      onClick={() => { setCompletedSeasonType(type); setFilterMonth(format(new Date(), "MM")); setFilterDay(null); setGamePage(1); setMonthClicked(false); }}
                       style={{ padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
                         background: completedSeasonType === type ? "var(--accent)" : "var(--surface2)",
                         color: completedSeasonType === type ? "#fff" : "var(--text-muted)" }}>
@@ -974,7 +982,10 @@ export default function AdminPage() {
                 ).map((m) => {
                   const labels: Record<string,string> = {"01":"1월","02":"2월","03":"3월","04":"4월","05":"5월","06":"6월","10":"10월","11":"11월","12":"12월"};
                   return (
-                    <button key={m} onClick={() => { setFilterMonth(m); setFilterDay(null); setGamePage(1); }}
+                    <button key={m} onClick={() => {
+                        if (filterMonth === m) { setMonthClicked(true); return; }
+                        setFilterMonth(m); setFilterDay(null); setGamePage(1); setMonthClicked(true);
+                      }}
                       style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 20,
                         background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
                         color: filterMonth === m ? "#fff" : "var(--text-muted)",
@@ -1040,19 +1051,53 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* 일 선택 버튼 */}
-              {daysWithGames.length > 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              {/* 일 캐러셀 (월 클릭 후 표시) */}
+              {monthClicked && daysWithGames.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                  {/* 전체 버튼 고정 */}
                   <button onClick={() => { setFilterDay(null); setGamePage(1); }}
-                    style={{ padding: "5px 14px", borderRadius: 20, background: filterDay === null ? "var(--accent2)" : "var(--surface2)", color: filterDay === null ? "#fff" : "var(--text-muted)", border: filterDay === null ? "none" : "1px solid var(--border)", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                    style={{
+                      flexShrink: 0, padding: "4px 10px", borderRadius: 8,
+                      background: filterDay === null ? "var(--accent2)" : "transparent",
+                      color: filterDay === null ? "#fff" : "var(--text-muted)",
+                      border: filterDay === null ? "2px solid var(--accent2)" : "2px solid var(--border)",
+                      fontWeight: 700, fontSize: 11, cursor: "pointer", transition: "all 0.15s",
+                      display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
+                    }}>
                     전체
                   </button>
-                  {daysWithGames.map((day) => (
-                    <button key={day} onClick={() => { setFilterDay(String(day)); setGamePage(1); }}
-                      style={{ padding: "5px 12px", borderRadius: 20, background: filterDay === String(day) ? "var(--accent2)" : "var(--surface2)", color: filterDay === String(day) ? "#fff" : "var(--text)", border: filterDay === String(day) ? "none" : "1px solid var(--border)", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-                      {day}일
-                    </button>
-                  ))}
+                  {/* 일 캐러셀 — 3일치 너비 고정 */}
+                  <div style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
+                    <div
+                      ref={dayScrollRef}
+                      onMouseDown={(e) => { dayMouseStartX.current = e.clientX; dayMouseStartScroll.current = dayScrollRef.current?.scrollLeft ?? 0; }}
+                      onMouseMove={(e) => { if (dayMouseStartX.current === null) return; const el = dayScrollRef.current; if (!el) return; el.scrollLeft = dayMouseStartScroll.current - (e.clientX - dayMouseStartX.current); }}
+                      onMouseUp={() => { dayMouseStartX.current = null; }}
+                      onMouseLeave={() => { dayMouseStartX.current = null; }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        overflowX: "auto", scrollbarWidth: "none",
+                        WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none",
+                      }}
+                    >
+                      {daysWithGames.map((day) => {
+                        const isSel = filterDay === String(day);
+                        return (
+                          <button key={day} onClick={() => { setFilterDay(String(day)); setGamePage(1); }}
+                            style={{
+                              flexShrink: 0, padding: "4px 8px", minWidth: 32, borderRadius: 8,
+                              background: isSel ? "var(--accent2)" : "transparent",
+                              color: isSel ? "#fff" : "var(--text)",
+                              border: isSel ? "2px solid var(--accent2)" : "2px solid var(--border)",
+                              fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "all 0.15s",
+                              display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
+                            }}>
+                            {day}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1083,8 +1128,9 @@ export default function AdminPage() {
 
                         {/* 중: 날짜시간 위 + 로고 [점수:점수] 로고 */}
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                          <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                            {format(new Date(game.start_time), "M/d HH:mm")}
+                          <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>
+                            <span style={{ color: "#ffffff" }}>{format(new Date(game.start_time), "M/d")}</span>
+                            <span style={{ color: "var(--text-muted)" }}> {format(new Date(game.start_time), "HH:mm")}</span>
                           </span>
                           <div style={{ display: "flex", alignItems: "center" }}>
                             <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
@@ -1164,32 +1210,19 @@ export default function AdminPage() {
                     </div>
                   ))}
 
-                  {/* 페이지네이션 */}
+                  {/* 점 네비게이터 (5경기 이상) */}
                   {totalPages > 1 && (
-                    <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12 }}>
-                      <button
-                        onClick={() => setGamePage((p) => Math.max(1, p - 1))}
-                        disabled={gamePage === 1}
-                        style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface2)", color: gamePage === 1 ? "var(--text-muted)" : "var(--text)", cursor: gamePage === 1 ? "default" : "pointer", fontSize: 13 }}>
-                        ‹
-                      </button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                        <button key={p} onClick={() => setGamePage(p)}
-                          style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: gamePage === p ? "var(--accent)" : "var(--surface2)", color: gamePage === p ? "#fff" : "var(--text)", cursor: "pointer", fontSize: 13, fontWeight: gamePage === p ? 700 : 400 }}>
-                          {p}
-                        </button>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, padding: "6px 0 2px" }}>
+                      {Array.from({ length: totalPages }).map((_, i) => (
+                        <button key={i} onClick={() => setGamePage(i + 1)} style={{
+                          width: i === gamePage - 1 ? 7 : 5, height: i === gamePage - 1 ? 7 : 5,
+                          borderRadius: "50%",
+                          background: i === gamePage - 1 ? "var(--text)" : "rgba(150,150,150,0.5)",
+                          border: "none", padding: 0, cursor: "pointer", transition: "all 0.2s", flexShrink: 0,
+                        }} />
                       ))}
-                      <button
-                        onClick={() => setGamePage((p) => Math.min(totalPages, p + 1))}
-                        disabled={gamePage === totalPages}
-                        style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface2)", color: gamePage === totalPages ? "var(--text-muted)" : "var(--text)", cursor: gamePage === totalPages ? "default" : "pointer", fontSize: 13 }}>
-                        ›
-                      </button>
                     </div>
                   )}
-                  <div style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
-                    총 {filteredGames.length}경기 · {gamePage}/{totalPages} 페이지
-                  </div>
                 </>
               )}
 
