@@ -26,6 +26,22 @@ interface GameResult {
   season_type?: string;
 }
 
+// 커스텀 달력 SVG 아이콘
+const CalendarSvgIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="2.5" width="16" height="14.5" rx="2" stroke="currentColor" strokeWidth="1.4"/>
+    <line x1="1" y1="6.5" x2="17" y2="6.5" stroke="currentColor" strokeWidth="1.4"/>
+    <line x1="5" y1="1" x2="5" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    <line x1="13" y1="1" x2="13" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    <rect x="3.5" y="9" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="7.75" y="9" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="12" y="9" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="3.5" y="12.5" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="7.75" y="12.5" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="12" y="12.5" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+  </svg>
+);
+
 export default function HistoryPage() {
   const supabase = createClient();
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -308,15 +324,23 @@ export default function HistoryPage() {
   const goPrev = useCallback(() => setPageIndex((p) => Math.max(p - 1, 0)), []);
 
   useEffect(() => {
-    const onTouchStart = (e: TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+    const onTouchStart = (e: TouchEvent) => {
+      if ((e.target as HTMLElement).closest("[data-carousel]")) return;
+      touchStartX.current = e.touches[0].clientX;
+    };
     const onTouchEnd = (e: TouchEvent) => {
+      if ((e.target as HTMLElement).closest("[data-carousel]")) return;
       if (touchStartX.current === null) return;
       const diff = touchStartX.current - e.changedTouches[0].clientX;
       if (Math.abs(diff) > 40) diff > 0 ? goNext() : goPrev();
       touchStartX.current = null;
     };
-    const onMouseDown = (e: MouseEvent) => { mouseStartXPage.current = e.clientX; };
+    const onMouseDown = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest("[data-carousel]")) return;
+      mouseStartXPage.current = e.clientX;
+    };
     const onMouseUp = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest("[data-carousel]")) return;
       if (mouseStartXPage.current === null) return;
       const diff = mouseStartXPage.current - e.clientX;
       if (Math.abs(diff) > 40) diff > 0 ? goNext() : goPrev();
@@ -402,8 +426,8 @@ export default function HistoryPage() {
         {/* 구분선 */}
         <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
 
-        {/* ── 월 캐러셀 외부 wrapper: overflow:hidden으로 레이아웃 이탈 차단 ── */}
-        <div style={{ flex: 1, minWidth: 0, overflow: "hidden", position: "relative" }}>
+        {/* ── 월 캐러셀 외부 wrapper: 3개 너비 고정 ── */}
+        <div data-carousel style={{ width: "calc(3 * 44px + 2 * 6px)", flexShrink: 0, overflow: "hidden", position: "relative" }}>
         <div
           ref={monthScrollRef}
           onScroll={onMonthScroll}
@@ -479,10 +503,10 @@ export default function HistoryPage() {
             borderRadius: 8, border: "1px solid var(--border)",
             background: calendarOpen ? "var(--accent)" : "var(--surface2)",
             color: calendarOpen ? "#fff" : "var(--text-muted)",
-            cursor: "pointer", fontSize: 16,
+            cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-          📅
+          <CalendarSvgIcon />
         </button>
       </div>
 
@@ -580,7 +604,7 @@ export default function HistoryPage() {
       {monthClicked && filterMonth && daysWithGames.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
           {/* 일 캐러셀 — 3일치 너비 고정 */}
-          <div style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
+          <div data-carousel style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
             <div
               ref={dayScrollRef}
               onMouseDown={handleDayMouseDown}
