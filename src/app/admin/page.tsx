@@ -654,590 +654,602 @@ export default function AdminPage() {
               {/* ── 1페이지: 자동등록 + 채점대기 ── */}
               {gameTabPage === 0 && <>
 
-              {/* ESPN 경기 등록하기 */}
-              <div className="card" style={{ marginBottom: 12, overflow: "visible" }}>
-                <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
-                  🏀 경기 자동 등록
-                </div>
+                {/* ESPN 경기 등록하기 */}
+                <div className="card" style={{ marginBottom: 12, overflow: "visible" }}>
+                  <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
+                    🏀 경기 자동 등록
+                  </div>
 
-                {/* 경기 등록하기 + 자동채점 2열 */}
-                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                  <button className="btn-primary" style={{ flex: 1 }}
-                    onClick={() => setEspnPickerOpen(true)} disabled={espnLoading}>
-                    {espnLoading ? "등록 중..." : "경기 등록하기"}
-                  </button>
-                  <button className="btn-primary" style={{ flex: 1, background: "var(--accent2)" }}
-                    onClick={gradeGamesAuto} disabled={gradeLoading}>
-                    {gradeLoading ? "채점 중..." : "자동채점"}
-                  </button>
-                </div>
+                  {/* 경기 등록하기 + 자동채점 2열 */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                    <button className="btn-primary" style={{ flex: 1 }}
+                      onClick={() => setEspnPickerOpen(true)} disabled={espnLoading}>
+                      {espnLoading ? "등록 중..." : "경기 등록하기"}
+                    </button>
+                    <button className="btn-primary" style={{ flex: 1, background: "var(--accent2)" }}
+                      onClick={gradeGamesAuto} disabled={gradeLoading}>
+                      {gradeLoading ? "채점 중..." : "자동채점"}
+                    </button>
+                  </div>
 
-                {/* 현재 등록된 경기 수(위너없음) + 마지막 실행 날짜 뱃지 */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{
-                    border: "1.5px solid #ff8c00",
-                    borderRadius: 20,
-                    padding: "2px 10px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: "#ff8c00",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                  }}>
-                    <strong style={{ fontVariantNumeric: "tabular-nums" }}>{noWinnerCount}</strong>경기 남음
-                  </span>
-                  {espnLastSync && (
+                  {/* 현재 등록된 경기 수(위너없음) + 마지막 실행 날짜 뱃지 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{
-                      border: "1.5px solid #39ff6a",
+                      border: "1.5px solid #ff8c00",
                       borderRadius: 20,
                       padding: "2px 10px",
                       fontSize: 11,
                       fontWeight: 600,
-                      color: "#39ff6a",
+                      color: "#ff8c00",
                       whiteSpace: "nowrap",
                       flexShrink: 0,
                     }}>
-                      {espnLastSync}
+                      <strong style={{ fontVariantNumeric: "tabular-nums" }}>{noWinnerCount}</strong>경기 남음
                     </span>
-                  )}
-                </div>
-
-                {espnResult && (
-                  <div style={{
-                    marginTop: 10, padding: "8px 12px", borderRadius: 8,
-                    background: espnResult.startsWith("✅") ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-                    color: espnResult.startsWith("✅") ? "var(--green)" : "var(--red)",
-                    fontSize: 13, fontWeight: 600,
-                  }}>
-                    {espnResult}
+                    {espnLastSync && (
+                      <span style={{
+                        border: "1.5px solid #39ff6a",
+                        borderRadius: 20,
+                        padding: "2px 10px",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#39ff6a",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}>
+                        {espnLastSync}
+                      </span>
+                    )}
                   </div>
-                )}
 
-                {/* 날짜 선택 팝업 */}
-                {espnPickerOpen && (
-                  <div style={{
-                    position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
-                    display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
-                  }} onClick={() => setEspnPickerOpen(false)}>
+                  {espnResult && (
                     <div style={{
-                      background: "var(--surface)", border: "1px solid var(--border)",
-                      borderRadius: 14, padding: "24px 20px", width: "100%", maxWidth: 320,
-                    }} onClick={(e) => e.stopPropagation()}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>날짜 범위 선택</div>
-                        <button onClick={() => setEspnPickerOpen(false)}
-                          style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                        <div style={{ flex: 1 }}>
-                          <label className="form-label">시작일</label>
-                          <ThemeProvider theme={darkTheme}>
-                          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
-                            <DatePicker
-                              value={dayjs(espnStartDate)}
-                              onChange={(d: Dayjs | null) => d && setEspnStartDate(d.format("YYYY-MM-DD"))}
-                              format="YY.MM.DD"
-                              slotProps={{ textField: { size: "small", sx: muiInputSx, style: { width: "100%" } } }}
-                            />
-                          </LocalizationProvider>
-                          </ThemeProvider>
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <label className="form-label">종료일</label>
-                          <ThemeProvider theme={darkTheme}>
-                          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
-                            <DatePicker
-                              value={dayjs(espnEndDate)}
-                              onChange={(d: Dayjs | null) => d && setEspnEndDate(d.format("YYYY-MM-DD"))}
-                              format="YY.MM.DD"
-                              slotProps={{ textField: { size: "small", sx: muiInputSx, style: { width: "100%" } } }}
-                            />
-                          </LocalizationProvider>
-                          </ThemeProvider>
-                        </div>
-                      </div>
-                      <button className="btn-primary" style={{ width: "100%" }}
-                        onClick={() => { setEspnPickerOpen(false); syncESPN(); }}
-                        disabled={espnLoading}>
-                        {espnLoading ? "가져오는 중..." : "가져오기"}
-                      </button>
+                      marginTop: 10, padding: "8px 12px", borderRadius: 8,
+                      background: espnResult.startsWith("✅") ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                      color: espnResult.startsWith("✅") ? "var(--green)" : "var(--red)",
+                      fontSize: 13, fontWeight: 600,
+                    }}>
+                      {espnResult}
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
 
-              {/* 채점 대기 박스 */}
-              <div style={{
-                border: "1px solid var(--border)", borderRadius: 10,
-                background: "var(--surface)", marginBottom: 12,
-              }}>
-                <div style={{
-                  fontWeight: 700, fontSize: 14, padding: "10px 14px",
-                  borderBottom: "1px solid var(--border)",
-                  display: "flex", alignItems: "center", gap: 6,
-                }}>
-                  <span>채점 대기</span>
-                  {pendingGames.length > 0 && (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
-                      {pendingGames.length}경기
-                    </span>
+                  {/* 날짜 선택 팝업 */}
+                  {espnPickerOpen && (
+                    <div style={{
+                      position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
+                      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+                    }} onClick={() => setEspnPickerOpen(false)}>
+                      <div style={{
+                        background: "var(--surface)", border: "1px solid var(--border)",
+                        borderRadius: 14, padding: "24px 20px", width: "100%", maxWidth: 320,
+                      }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                          <div style={{ fontWeight: 700, fontSize: 15 }}>날짜 범위 선택</div>
+                          <button onClick={() => setEspnPickerOpen(false)}
+                            style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+                          <div>
+                            <label className="form-label">시작일</label>
+                          <ThemeProvider theme={darkTheme}>
+                              <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                                <DatePicker
+                                  value={dayjs(espnStartDate)}
+                                  onChange={(d: Dayjs | null) => d && setEspnStartDate(d.format("YYYY-MM-DD"))}
+                                  format="YY.MM.DD"
+                                  slotProps={{ textField: { size: "small", sx: muiInputSx, style: { width: "100%" } } }}
+                                />
+                              </LocalizationProvider>
+                            </ThemeProvider>
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label className="form-label">종료일</label>
+                            <ThemeProvider theme={darkTheme}>
+                              <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                                <DatePicker
+                                  value={dayjs(espnEndDate)}
+                                  onChange={(d: Dayjs | null) => d && setEspnEndDate(d.format("YYYY-MM-DD"))}
+                                  format="YY.MM.DD"
+                                  slotProps={{ textField: { size: "small", sx: muiInputSx, style: { width: "100%" } } }}
+                                />
+                              </LocalizationProvider>
+                            </ThemeProvider>
+                          </div>
+                        </div>
+                        <button className="btn-primary" style={{ width: "100%" }}
+                          onClick={() => { setEspnPickerOpen(false); syncESPN(); }}
+                          disabled={espnLoading}>
+                          {espnLoading ? "가져오는 중..." : "가져오기"}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div style={{ padding: "8px 0" }}>
-              {/* 채점 대기 경기 */}
-              {pendingGames.length > 0 ? (
-                <>
-                  {pendingGames.map((game) => {
-                    const pts = ROUND_POINTS[game.round];
-                    return (
-                      <div key={game.id} style={{ padding: "4px 10px" }}>
-                        <div className="card" style={{ padding: "8px 10px", marginBottom: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center" }}>
 
-                          {/* 좌: 라운드+pt (투표탭 동일 스타일) */}
-                          <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                              <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
-                                {game.round.replace(" ", "\n")}
-                              </span>
-                              {pts && (
-                                <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
-                                  {pts}pt
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                {/* 채점 대기 박스 */}
+                <div style={{
+                  border: "1px solid var(--border)", borderRadius: 10,
+                  background: "var(--surface)", marginBottom: 12,
+                }}>
+                  <div style={{
+                    fontWeight: 700, fontSize: 14, padding: "10px 14px",
+                    borderBottom: "1px solid var(--border)",
+                    display: "flex", alignItems: "center", gap: 6,
+                  }}>
+                    <span>채점 대기</span>
+                    {pendingGames.length > 0 && (
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
+                        {pendingGames.length}경기
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ padding: "8px 0" }}>
+                    {/* 채점 대기 경기 */}
+                    {pendingGames.length > 0 ? (
+                      <>
+                        {pendingGames.map((game) => {
+                          const pts = ROUND_POINTS[game.round];
+                          return (
+                            <div key={game.id} style={{ padding: "4px 10px" }}>
+                              <div className="card" style={{ padding: "8px 10px", marginBottom: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center" }}>
 
-                          {/* 중: 날짜시간 위 + 로고 [vs] 로고 */}
-                          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                            <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>
-                              <span style={{ color: "#ffffff" }}>{format(new Date(game.start_time), "M/d")}</span>
-                              <span style={{ color: "var(--text-muted)" }}> {format(new Date(game.start_time), "HH:mm")}</span>
-                            </span>
-                            <div style={{ display: "flex", alignItems: "center" }}>
-                              <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
-                                style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
-                                onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                              <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11, padding: "0 4px" }}>vs</span>
-                              <img src={getTeamLogoUrl(game.away_team)} alt={getTeamAbbr(game.away_team)}
-                                style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
-                                onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                            </div>
-                          </div>
-                          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                            <button onClick={() => deleteGame(game.id)}
-                              style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
-                              삭제
-                            </button>
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <button onClick={() => gradeGame(game.id, "home")}
-                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.1)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)", whiteSpace: "nowrap" }}>
-                                {getTeamAbbr(game.home_team)}
-                              </button>
-                              <button onClick={() => gradeGame(game.id, "away")}
-                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.3)", whiteSpace: "nowrap" }}>
-                                {getTeamAbbr(game.away_team)}
-                              </button>
-                            </div>
-                          </div>
+                                  {/* 좌: 라운드+pt (투표탭 동일 스타일) */}
+                                  <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                                      <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
+                                        {game.round.replace(" ", "\n")}
+                                      </span>
+                                      {pts && (
+                                        <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                                          {pts}pt
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
 
-                        </div>
-                        </div>
+                                  {/* 중: 날짜시간 위 + 로고 [vs] 로고 */}
+                                  <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                                    <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>
+                                      <span style={{ color: "#ffffff" }}>{format(new Date(game.start_time), "M/d")}</span>
+                                      <span style={{ color: "var(--text-muted)" }}> {format(new Date(game.start_time), "HH:mm")}</span>
+                                    </span>
+                                    <div style={{ display: "flex", alignItems: "center" }}>
+                                      <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
+                                        style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                                        onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                                      <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 11, padding: "0 4px" }}>vs</span>
+                                      <img src={getTeamLogoUrl(game.away_team)} alt={getTeamAbbr(game.away_team)}
+                                        style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                                        onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                                    </div>
+                                  </div>
+                                  <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                                    <button onClick={() => deleteGame(game.id)}
+                                      style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>
+                                      삭제
+                                    </button>
+                                    <div style={{ display: "flex", gap: 4 }}>
+                                      <button onClick={() => gradeGame(game.id, "home")}
+                                        style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.1)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)", whiteSpace: "nowrap" }}>
+                                        {getTeamAbbr(game.home_team)}
+                                      </button>
+                                      <button onClick={() => gradeGame(game.id, "away")}
+                                        style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.3)", whiteSpace: "nowrap" }}>
+                                        {getTeamAbbr(game.away_team)}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <div style={{ textAlign: "center", padding: "14px 0", fontSize: 13, color: "var(--text-muted)" }}>
+                        채점 대기 경기 없음
                       </div>
-                    );
-                  })}
-                </>
-              ) : (
-                <div style={{ textAlign: "center", padding: "14px 0", fontSize: 13, color: "var(--text-muted)" }}>
-                  채점 대기 경기 없음
+                    )}
+                  </div>
                 </div>
-              )}
-                </div>
-              </div>
 
               </>}
 
               {/* ── 2페이지: 경기추가 + 채점완료 ── */}
               {gameTabPage === 1 && <>
 
-              {/* 경기 추가 폼 - 접기/펼치기 */}
-              <div style={{
-                border: "1px solid var(--border)", borderRadius: 10,
-                background: "var(--surface)", marginBottom: 12,
-              }}>
+                {/* 경기 추가 폼 - 접기/펼치기 */}
+                <div style={{
+                  border: "1px solid var(--border)", borderRadius: 10,
+                  background: "var(--surface)", marginBottom: 12,
+                }}>
+                  <div
+                    onClick={() => setAddGameOpen((v) => !v)}
+                    style={{
+                      fontWeight: 700, fontSize: 14, padding: "10px 14px",
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      cursor: "pointer", userSelect: "none",
+                      borderBottom: addGameOpen ? "1px solid var(--border)" : "none",
+                    }}>
+                    <span>경기 추가</span>
+                    <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
+                      {addGameOpen ? "−" : "+"}
+                    </span>
+                  </div>
+
+                  {addGameOpen && (
+                    <div style={{ padding: "14px 16px" }}>
+                      {/* 홈팀 / 원정팀 */}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
+                          <label className="form-label">홈팀</label>
+                          <select className="filter-select" style={{ width: "100%" }}
+                            value={newGame.home_team}
+                            onChange={(e) => setNewGame({ ...newGame, home_team: e.target.value })}>
+                            <optgroup label="── 동부 ──">
+                              {EAST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
+                            </optgroup>
+                            <optgroup label="── 서부 ──">
+                              {WEST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
+                          <label className="form-label">원정팀</label>
+                          <select className="filter-select" style={{ width: "100%" }}
+                            value={newGame.away_team}
+                            onChange={(e) => setNewGame({ ...newGame, away_team: e.target.value })}>
+                            <optgroup label="── 동부 ──">
+                              {EAST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
+                            </optgroup>
+                            <optgroup label="── 서부 ──">
+                              {WEST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
+                            </optgroup>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* 시작시간 / 마감시간 */}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        {(["start_time", "vote_deadline"] as const).map((field) => (
+                          <div key={field} className="form-group" style={{ flex: 1, minWidth: 0 }}>
+                            <label className="form-label">{field === "start_time" ? "경기 시작시간" : "투표 마감시간"}</label>
+                            <ThemeProvider theme={darkTheme}>
+                              <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                                <DateTimePicker
+                                  value={newGame[field]}
+                                  onChange={(d: Dayjs | null) => d && setNewGame({ ...newGame, [field]: d })}
+                                  format="YY/MM/DD A hh:mm"
+                                  ampm={true}
+                                  minutesStep={10}
+                                  slotProps={{
+                                    textField: {
+                                      size: "small",
+                                      sx: muiInputSx,
+                                      style: { width: "100%" },
+                                    },
+                                  }}
+                                />
+                              </LocalizationProvider>
+                            </ThemeProvider>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 라운드 */}
+                      <div className="form-group">
+                        <label className="form-label">라운드</label>
+                        <select className="filter-select" style={{ width: "100%" }}
+                          value={newGame.round}
+                          onChange={(e) => setNewGame({ ...newGame, round: e.target.value as Round })}>
+                          {ROUNDS.map((r) => <option key={r} value={r}>{r} ({ROUND_POINTS[r]}점)</option>)}
+                        </select>
+                      </div>
+
+                      <button className="btn-primary" style={{ width: "100%" }} onClick={addGame}>
+                        경기 추가
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 채점 완료 경기 - 원본 스타일 헤더 */}
                 <div
-                  onClick={() => setAddGameOpen((v) => !v)}
+                  onClick={() => setCompletedSectionOpen((v) => !v)}
                   style={{
-                    fontWeight: 700, fontSize: 14, padding: "10px 14px",
+                    fontWeight: 700, fontSize: 14, marginTop: 8, marginBottom: 4,
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     cursor: "pointer", userSelect: "none",
-                    borderBottom: addGameOpen ? "1px solid var(--border)" : "none",
+                    padding: "10px 14px", borderRadius: 10,
+                    border: "1px solid var(--border)", background: "var(--surface)",
                   }}>
-                  <span>경기 추가</span>
+                  <span>채점 완료 경기</span>
                   <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
-                    {addGameOpen ? "−" : "+"}
+                    {completedSectionOpen ? "−" : "+"}
                   </span>
                 </div>
 
-                {addGameOpen && (
-                  <div style={{ padding: "14px 16px" }}>
-                    {/* 홈팀 / 원정팀 */}
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
-                        <label className="form-label">홈팀</label>
-                        <select className="filter-select" style={{ width: "100%" }}
-                          value={newGame.home_team}
-                          onChange={(e) => setNewGame({ ...newGame, home_team: e.target.value })}>
-                          <optgroup label="── 동부 ──">
-                            {EAST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
-                          </optgroup>
-                          <optgroup label="── 서부 ──">
-                            {WEST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
-                          </optgroup>
-                        </select>
-                      </div>
-                      <div className="form-group" style={{ flex: "1 1 140px", minWidth: 0 }}>
-                        <label className="form-label">원정팀</label>
-                        <select className="filter-select" style={{ width: "100%" }}
-                          value={newGame.away_team}
-                          onChange={(e) => setNewGame({ ...newGame, away_team: e.target.value })}>
-                          <optgroup label="── 동부 ──">
-                            {EAST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
-                          </optgroup>
-                          <optgroup label="── 서부 ──">
-                            {WEST_TEAMS.map((t) => <option key={t.en} value={t.en}>{t.ko} ({t.abbr})</option>)}
-                          </optgroup>
-                        </select>
-                      </div>
-                    </div>
+                {completedSectionOpen && <>
 
-                    {/* 시작시간 / 마감시간 */}
-                    <div style={{ display: "flex", gap: 8 }}>
-                      {(["start_time", "vote_deadline"] as const).map((field) => (
-                        <div key={field} className="form-group" style={{ flex: 1, minWidth: 0 }}>
-                          <label className="form-label">{field === "start_time" ? "경기 시작시간" : "투표 마감시간"}</label>
-                          <ThemeProvider theme={darkTheme}>
-                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
-                            <DateTimePicker
-                              value={newGame[field]}
-                              onChange={(d: Dayjs | null) => d && setNewGame({ ...newGame, [field]: d })}
-                              format="YY/MM/DD A hh:mm"
-                              ampm={true}
-                              minutesStep={10}
-                              slotProps={{
-                                textField: {
-                                  size: "small",
-                                  sx: muiInputSx,
-                                  style: { width: "100%" },
-                                },
-                              }}
-                            />
-                          </LocalizationProvider>
-                    </ThemeProvider>
-                        </div>
+                  {/* history 스타일 필터 바 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+                    <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
+                      {(["regular", "post"] as const).map((type) => (
+                        <button key={type}
+                          onClick={() => { setCompletedSeasonType(type); setFilterMonth(format(new Date(), "MM")); setFilterDay(null); setGamePage(1); setMonthClicked(false); }}
+                          style={{
+                            padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
+                            background: completedSeasonType === type ? "var(--accent)" : "var(--surface2)",
+                            color: completedSeasonType === type ? "#fff" : "var(--text-muted)"
+                          }}>
+                          {type === "regular" ? "정규" : "POST"}
+                        </button>
                       ))}
                     </div>
-
-                    {/* 라운드 */}
-                    <div className="form-group">
-                      <label className="form-label">라운드</label>
-                      <select className="filter-select" style={{ width: "100%" }}
-                        value={newGame.round}
-                        onChange={(e) => setNewGame({ ...newGame, round: e.target.value as Round })}>
-                        {ROUNDS.map((r) => <option key={r} value={r}>{r} ({ROUND_POINTS[r]}점)</option>)}
-                      </select>
-                    </div>
-
-                    <button className="btn-primary" style={{ width: "100%" }} onClick={addGame}>
-                      경기 추가
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 채점 완료 경기 - 원본 스타일 헤더 */}
-              <div
-                onClick={() => setCompletedSectionOpen((v) => !v)}
-                style={{
-                  fontWeight: 700, fontSize: 14, marginTop: 8, marginBottom: 4,
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  cursor: "pointer", userSelect: "none",
-                  padding: "10px 14px", borderRadius: 10,
-                  border: "1px solid var(--border)", background: "var(--surface)",
-                }}>
-                <span>채점 완료 경기</span>
-                <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
-                  {completedSectionOpen ? "−" : "+"}
-                </span>
-              </div>
-
-              {completedSectionOpen && <>
-
-              {/* history 스타일 필터 바 */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, marginBottom: 8, overflowX: "auto", scrollbarWidth: "none" }}>
-                <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", flexShrink: 0 }}>
-                  {(["regular", "post"] as const).map((type) => (
-                    <button key={type}
-                      onClick={() => { setCompletedSeasonType(type); setFilterMonth(format(new Date(), "MM")); setFilterDay(null); setGamePage(1); setMonthClicked(false); }}
-                      style={{ padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none",
-                        background: completedSeasonType === type ? "var(--accent)" : "var(--surface2)",
-                        color: completedSeasonType === type ? "#fff" : "var(--text-muted)" }}>
-                      {type === "regular" ? "정규" : "POST"}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
-                {(completedSeasonType === "regular"
-                  ? ["10","11","12","01","02","03","04"]
-                  : ["04","05","06"]
-                ).map((m) => {
-                  const labels: Record<string,string> = {"01":"1월","02":"2월","03":"3월","04":"4월","05":"5월","06":"6월","10":"10월","11":"11월","12":"12월"};
-                  return (
-                    <button key={m} onClick={() => {
-                        if (filterMonth === m) { setMonthClicked(true); return; }
-                        setFilterMonth(m); setFilterDay(null); setGamePage(1); setMonthClicked(true);
-                      }}
-                      style={{ flexShrink: 0, padding: "5px 10px", borderRadius: 20,
-                        background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
-                        color: filterMonth === m ? "#fff" : "var(--text-muted)",
-                        border: filterMonth === m ? "none" : "1px solid var(--border)",
-                        fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
-                      {labels[m]}
-                    </button>
-                  );
-                })}
-                <button onClick={() => setCalendarOpen(!calendarOpen)}
-                  style={{ marginLeft: "auto", flexShrink: 0, width: 32, height: 32, borderRadius: 8,
-                    border: "1.5px solid var(--accent)",
-                    background: calendarOpen ? "var(--accent)" : "rgba(99,102,241,0.15)",
-                    color: calendarOpen ? "#fff" : "var(--accent)",
-                    cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  📅
-                </button>
-              </div>
-
-              {/* 달력 패널 */}
-              {calendarOpen && (
-                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px", marginBottom: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                    <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()-1, 1))}
-                      style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>‹</button>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>
-                      {calendarMonth.toLocaleDateString("ko-KR", { year: "numeric", month: "long" })}
-                    </span>
-                    <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()+1, 1))}
-                      style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>›</button>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
-                    {["일","월","화","수","목","금","토"].map(d => (
-                      <div key={d} style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, padding: "2px 0" }}>{d}</div>
-                    ))}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-                    {(() => {
-                      const year = calendarMonth.getFullYear();
-                      const month = calendarMonth.getMonth();
-                      const firstDow = new Date(year, month, 1).getDay();
-                      const daysInMonth = new Date(year, month+1, 0).getDate();
-                      const cells = [];
-                      for (let i = 0; i < firstDow; i++) cells.push(<div key={`e-${i}`} />);
-                      for (let d = 1; d <= daysInMonth; d++) {
-                        const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-                        const cnt = gameDayMap[dateStr] || 0;
-                        const isSel = filterDay === String(d) && filterMonth === String(month+1).padStart(2,"0");
-                        cells.push(
-                          <div key={d} onClick={() => cnt > 0 ? handleAdminCalendarDay(dateStr) : undefined}
-                            style={{ textAlign: "center", padding: "4px 2px", borderRadius: 8, cursor: cnt > 0 ? "pointer" : "default",
-                              background: isSel ? "var(--accent)" : "transparent", minHeight: 44,
-                              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
-                              opacity: cnt === 0 ? 0.25 : 1 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: isSel ? "#fff" : "var(--text)", lineHeight: 1 }}>{d}</span>
-                            {cnt > 0 && <span style={{ fontSize: 9, fontWeight: 600, color: isSel ? "#fff" : "var(--accent)" }}>{cnt}</span>}
-                          </div>
-                        );
-                      }
-                      return cells;
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {/* 일 캐러셀 (월 클릭 후 표시) */}
-              {monthClicked && daysWithGames.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                  {/* 전체 버튼 고정 */}
-                  <button onClick={() => { setFilterDay(null); setGamePage(1); }}
-                    style={{
-                      flexShrink: 0, padding: "4px 10px", borderRadius: 8,
-                      background: filterDay === null ? "var(--accent2)" : "transparent",
-                      color: filterDay === null ? "#fff" : "var(--text-muted)",
-                      border: filterDay === null ? "2px solid var(--accent2)" : "2px solid var(--border)",
-                      fontWeight: 700, fontSize: 11, cursor: "pointer", transition: "all 0.15s",
-                      display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
-                    }}>
-                    전체
-                  </button>
-                  {/* 일 캐러셀 — 3일치 너비 고정 */}
-                  <div style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
-                    <div
-                      ref={dayScrollRef}
-                      onMouseDown={(e) => { dayMouseStartX.current = e.clientX; dayMouseStartScroll.current = dayScrollRef.current?.scrollLeft ?? 0; }}
-                      onMouseMove={(e) => { if (dayMouseStartX.current === null) return; const el = dayScrollRef.current; if (!el) return; el.scrollLeft = dayMouseStartScroll.current - (e.clientX - dayMouseStartX.current); }}
-                      onMouseUp={() => { dayMouseStartX.current = null; }}
-                      onMouseLeave={() => { dayMouseStartX.current = null; }}
+                    <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
+                    {(completedSeasonType === "regular"
+                      ? ["10", "11", "12", "01", "02", "03", "04"]
+                      : ["04", "05", "06"]
+                    ).map((m) => {
+                      const labels: Record<string, string> = { "01": "1월", "02": "2월", "03": "3월", "04": "4월", "05": "5월", "06": "6월", "10": "10월", "11": "11월", "12": "12월" };
+                      return (
+                        <button key={m} onClick={() => {
+                          if (filterMonth === m) { setMonthClicked(true); return; }
+                          setFilterMonth(m); setFilterDay(null); setGamePage(1); setMonthClicked(true);
+                        }}
+                          style={{
+                            flexShrink: 0, padding: "5px 10px", borderRadius: 20,
+                            background: filterMonth === m ? "var(--accent)" : "var(--surface2)",
+                            color: filterMonth === m ? "#fff" : "var(--text-muted)",
+                            border: filterMonth === m ? "none" : "1px solid var(--border)",
+                            fontWeight: 600, fontSize: 12, cursor: "pointer"
+                          }}>
+                          {labels[m]}
+                        </button>
+                      );
+                    })}
+                    <button onClick={() => setCalendarOpen(!calendarOpen)}
                       style={{
-                        display: "flex", alignItems: "center", gap: 6,
-                        overflowX: "auto", scrollbarWidth: "none",
-                        WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none",
-                      }}
-                    >
-                      {daysWithGames.map((day) => {
-                        const isSel = filterDay === String(day);
-                        return (
-                          <button key={day} onClick={() => { setFilterDay(String(day)); setGamePage(1); }}
-                            style={{
-                              flexShrink: 0, padding: "4px 8px", minWidth: 32, borderRadius: 8,
-                              background: isSel ? "var(--accent2)" : "transparent",
-                              color: isSel ? "#fff" : "var(--text)",
-                              border: isSel ? "2px solid var(--accent2)" : "2px solid var(--border)",
-                              fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "all 0.15s",
-                              display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
-                            }}>
-                            {day}
-                          </button>
-                        );
-                      })}
-                    </div>
+                        marginLeft: "auto", flexShrink: 0, width: 32, height: 32, borderRadius: 8,
+                        border: "1.5px solid var(--accent)",
+                        background: calendarOpen ? "var(--accent)" : "rgba(99,102,241,0.15)",
+                        color: calendarOpen ? "#fff" : "var(--accent)",
+                        cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center"
+                      }}>
+                      📅
+                    </button>
                   </div>
-                </div>
-              )}
 
-              {filteredGames.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📅</div>
-                  <div className="empty-title">해당 기간 채점된 경기가 없습니다</div>
-                </div>
-              ) : (
-                <>
-                  {pagedGames.map((game) => (
-                    <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
-                      <div style={{ display: "flex", alignItems: "center" }}>
-
-                        {/* 좌: 라운드+pt (투표탭 동일 스타일) */}
-                        <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                            <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
-                              {game.round.replace(" ", "\n")}
-                            </span>
-                            {ROUND_POINTS[game.round] && (
-                              <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
-                                {ROUND_POINTS[game.round]}pt
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* 중: 날짜시간 위 + 로고 [점수:점수] 로고 */}
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                          <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>
-                            <span style={{ color: "#ffffff" }}>{format(new Date(game.start_time), "M/d")}</span>
-                            <span style={{ color: "var(--text-muted)" }}> {format(new Date(game.start_time), "HH:mm")}</span>
-                          </span>
-                          <div style={{ display: "flex", alignItems: "center" }}>
-                            <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
-                              style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0, opacity: game.winner && game.winner !== "home" ? 0.35 : 1 }}
-                              onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                            <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "0 4px" }}>
-                              <span style={{ fontSize: 15, fontWeight: 800, color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
-                                {game.home_score ?? "-"}
-                              </span>
-                              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>:</span>
-                              <span style={{ fontSize: 15, fontWeight: 800, color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
-                                {game.away_score ?? "-"}
-                              </span>
-                            </div>
-                            <img src={getTeamLogoUrl(game.away_team)} alt={getTeamAbbr(game.away_team)}
-                              style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0, opacity: game.winner && game.winner !== "away" ? 0.35 : 1 }}
-                              onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                          </div>
-                        </div>
-
-                        {/* 우: 승선택 / 재채점 + COMPLETE 도장 */}
-                        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, position: "relative" }}>
-                          {/* COMPLETE 도장 - winner 있을 때 */}
-                          {game.winner && regradeGameId !== game.id && (
-                            <div style={{
-                              border: "2px solid #22c55e", borderRadius: 4,
-                              padding: "1px 6px", color: "#22c55e",
-                              fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
-                              whiteSpace: "nowrap", marginBottom: 2,
-                              transform: "rotate(-8deg)",
-                            }}>
-                              COMPLETE
-                            </div>
-                          )}
-                          {/* 아랫줄: 승 선택 or 재채점 */}
-                          {regradeGameId !== game.id ? (
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <button
-                                onClick={() => game.winner ? setRegradeGameId(game.id) : resetAndRegrade(game.id, "home")}
-                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-                                  background: game.winner === "home" ? "rgba(34,197,94,0.2)" : "var(--surface2)",
-                                  color: game.winner === "home" ? "var(--green)" : "var(--text-muted)",
-                                  border: game.winner === "home" ? "1px solid rgba(34,197,94,0.4)" : "1px solid var(--border)" }}>
-                                {getTeamAbbr(game.home_team)}{game.winner === "home" ? " ✓" : ""}
-                              </button>
-                              <button
-                                onClick={() => game.winner ? setRegradeGameId(game.id) : resetAndRegrade(game.id, "away")}
-                                style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
-                                  background: game.winner === "away" ? "rgba(59,130,246,0.2)" : "var(--surface2)",
-                                  color: game.winner === "away" ? "var(--accent2)" : "var(--text-muted)",
-                                  border: game.winner === "away" ? "1px solid rgba(59,130,246,0.4)" : "1px solid var(--border)" }}>
-                                {getTeamAbbr(game.away_team)}{game.winner === "away" ? " ✓" : ""}
-                              </button>
-                            </div>
-                          ) : (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
-                              <div style={{ display: "flex", gap: 4 }}>
-                                <button style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.2)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.4)", whiteSpace: "nowrap" }}
-                                  onClick={() => resetAndRegrade(game.id, "home")}>
-                                  {getTeamAbbr(game.home_team)}
-                                </button>
-                                <button style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.2)", whiteSpace: "nowrap" }}
-                                  onClick={() => resetAndRegrade(game.id, "away")}>
-                                  {getTeamAbbr(game.away_team)}
-                                </button>
-                              </div>
-                              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                                <span style={{ fontSize: 10, color: "var(--gold)" }}>⚠️ 재채점</span>
-                                <button style={{ fontSize: 10, color: "var(--text-muted)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
-                                  onClick={() => setRegradeGameId(null)}>취소</button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
+                  {/* 달력 패널 */}
+                  {calendarOpen && (
+                    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "12px", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                        <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+                          style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>‹</button>
+                        <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>
+                          {calendarMonth.toLocaleDateString("ko-KR", { year: "numeric", month: "long" })}
+                        </span>
+                        <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+                          style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", width: 28, height: 28, borderRadius: 6, cursor: "pointer", fontSize: 14 }}>›</button>
                       </div>
-                    </div>
-                  ))}
-
-                  {/* 점 네비게이터 (5경기 이상) */}
-                  {totalPages > 1 && (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, padding: "6px 0 2px" }}>
-                      {Array.from({ length: totalPages }).map((_, i) => (
-                        <button key={i} onClick={() => setGamePage(i + 1)} style={{
-                          width: i === gamePage - 1 ? 7 : 5, height: i === gamePage - 1 ? 7 : 5,
-                          borderRadius: "50%",
-                          background: i === gamePage - 1 ? "var(--text)" : "rgba(150,150,150,0.5)",
-                          border: "none", padding: 0, cursor: "pointer", transition: "all 0.2s", flexShrink: 0,
-                        }} />
-                      ))}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+                        {["일", "월", "화", "수", "목", "금", "토"].map(d => (
+                          <div key={d} style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, padding: "2px 0" }}>{d}</div>
+                        ))}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                        {(() => {
+                          const year = calendarMonth.getFullYear();
+                          const month = calendarMonth.getMonth();
+                          const firstDow = new Date(year, month, 1).getDay();
+                          const daysInMonth = new Date(year, month + 1, 0).getDate();
+                          const cells = [];
+                          for (let i = 0; i < firstDow; i++) cells.push(<div key={`e-${i}`} />);
+                          for (let d = 1; d <= daysInMonth; d++) {
+                            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                            const cnt = gameDayMap[dateStr] || 0;
+                            const isSel = filterDay === String(d) && filterMonth === String(month + 1).padStart(2, "0");
+                            cells.push(
+                              <div key={d} onClick={() => cnt > 0 ? handleAdminCalendarDay(dateStr) : undefined}
+                                style={{
+                                  textAlign: "center", padding: "4px 2px", borderRadius: 8, cursor: cnt > 0 ? "pointer" : "default",
+                                  background: isSel ? "var(--accent)" : "transparent", minHeight: 44,
+                                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+                                  opacity: cnt === 0 ? 0.25 : 1
+                                }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: isSel ? "#fff" : "var(--text)", lineHeight: 1 }}>{d}</span>
+                                {cnt > 0 && <span style={{ fontSize: 9, fontWeight: 600, color: isSel ? "#fff" : "var(--accent)" }}>{cnt}</span>}
+                              </div>
+                            );
+                          }
+                          return cells;
+                        })()}
+                      </div>
                     </div>
                   )}
-                </>
-              )}
 
-              </>}
+                  {/* 일 캐러셀 (월 클릭 후 표시) */}
+                  {monthClicked && daysWithGames.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                      {/* 전체 버튼 고정 */}
+                      <button onClick={() => { setFilterDay(null); setGamePage(1); }}
+                        style={{
+                          flexShrink: 0, padding: "4px 10px", borderRadius: 8,
+                          background: filterDay === null ? "var(--accent2)" : "transparent",
+                          color: filterDay === null ? "#fff" : "var(--text-muted)",
+                          border: filterDay === null ? "2px solid var(--accent2)" : "2px solid var(--border)",
+                          fontWeight: 700, fontSize: 11, cursor: "pointer", transition: "all 0.15s",
+                          display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
+                        }}>
+                        전체
+                      </button>
+                      {/* 일 캐러셀 — 3일치 너비 고정 */}
+                      <div style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
+                        <div
+                          ref={dayScrollRef}
+                          onMouseDown={(e) => { dayMouseStartX.current = e.clientX; dayMouseStartScroll.current = dayScrollRef.current?.scrollLeft ?? 0; }}
+                          onMouseMove={(e) => { if (dayMouseStartX.current === null) return; const el = dayScrollRef.current; if (!el) return; el.scrollLeft = dayMouseStartScroll.current - (e.clientX - dayMouseStartX.current); }}
+                          onMouseUp={() => { dayMouseStartX.current = null; }}
+                          onMouseLeave={() => { dayMouseStartX.current = null; }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 6,
+                            overflowX: "auto", scrollbarWidth: "none",
+                            WebkitOverflowScrolling: "touch", cursor: "grab", userSelect: "none",
+                          }}
+                        >
+                          {daysWithGames.map((day) => {
+                            const isSel = filterDay === String(day);
+                            return (
+                              <button key={day} onClick={() => { setFilterDay(String(day)); setGamePage(1); }}
+                                style={{
+                                  flexShrink: 0, padding: "4px 8px", minWidth: 32, borderRadius: 8,
+                                  background: isSel ? "var(--accent2)" : "transparent",
+                                  color: isSel ? "#fff" : "var(--text)",
+                                  border: isSel ? "2px solid var(--accent2)" : "2px solid var(--border)",
+                                  fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "all 0.15s",
+                                  display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
+                                }}>
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {filteredGames.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">📅</div>
+                      <div className="empty-title">해당 기간 채점된 경기가 없습니다</div>
+                    </div>
+                  ) : (
+                    <>
+                      {pagedGames.map((game) => (
+                        <div key={game.id} className="card" style={{ padding: "8px 10px" }}>
+                          <div style={{ display: "flex", alignItems: "center" }}>
+
+                            {/* 좌: 라운드+pt (투표탭 동일 스타일) */}
+                            <div style={{ width: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                                <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
+                                  {game.round.replace(" ", "\n")}
+                                </span>
+                                {ROUND_POINTS[game.round] && (
+                                  <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                                    {ROUND_POINTS[game.round]}pt
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 중: 날짜시간 위 + 로고 [점수:점수] 로고 */}
+                            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                              <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>
+                                <span style={{ color: "#ffffff" }}>{format(new Date(game.start_time), "M/d")}</span>
+                                <span style={{ color: "var(--text-muted)" }}> {format(new Date(game.start_time), "HH:mm")}</span>
+                              </span>
+                              <div style={{ display: "flex", alignItems: "center" }}>
+                                <img src={getTeamLogoUrl(game.home_team)} alt={getTeamAbbr(game.home_team)}
+                                  style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0, opacity: game.winner && game.winner !== "home" ? 0.35 : 1 }}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                                <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "0 4px" }}>
+                                  <span style={{ fontSize: 15, fontWeight: 800, color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
+                                    {game.home_score ?? "-"}
+                                  </span>
+                                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>:</span>
+                                  <span style={{ fontSize: 15, fontWeight: 800, color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
+                                    {game.away_score ?? "-"}
+                                  </span>
+                                </div>
+                                <img src={getTeamLogoUrl(game.away_team)} alt={getTeamAbbr(game.away_team)}
+                                  style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0, opacity: game.winner && game.winner !== "away" ? 0.35 : 1 }}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                              </div>
+                            </div>
+
+                            {/* 우: 승선택 / 재채점 + COMPLETE 도장 */}
+                            <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, position: "relative" }}>
+                              {/* COMPLETE 도장 - winner 있을 때 */}
+                              {game.winner && regradeGameId !== game.id && (
+                                <div style={{
+                                  border: "2px solid #22c55e", borderRadius: 4,
+                                  padding: "1px 6px", color: "#22c55e",
+                                  fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+                                  whiteSpace: "nowrap", marginBottom: 2,
+                                  transform: "rotate(-8deg)",
+                                }}>
+                                  COMPLETE
+                                </div>
+                              )}
+                              {/* 아랫줄: 승 선택 or 재채점 */}
+                              {regradeGameId !== game.id ? (
+                                <div style={{ display: "flex", gap: 4 }}>
+                                  <button
+                                    onClick={() => game.winner ? setRegradeGameId(game.id) : resetAndRegrade(game.id, "home")}
+                                    style={{
+                                      padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+                                      background: game.winner === "home" ? "rgba(34,197,94,0.2)" : "var(--surface2)",
+                                      color: game.winner === "home" ? "var(--green)" : "var(--text-muted)",
+                                      border: game.winner === "home" ? "1px solid rgba(34,197,94,0.4)" : "1px solid var(--border)"
+                                    }}>
+                                    {getTeamAbbr(game.home_team)}{game.winner === "home" ? " ✓" : ""}
+                                  </button>
+                                  <button
+                                    onClick={() => game.winner ? setRegradeGameId(game.id) : resetAndRegrade(game.id, "away")}
+                                    style={{
+                                      padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+                                      background: game.winner === "away" ? "rgba(59,130,246,0.2)" : "var(--surface2)",
+                                      color: game.winner === "away" ? "var(--accent2)" : "var(--text-muted)",
+                                      border: game.winner === "away" ? "1px solid rgba(59,130,246,0.4)" : "1px solid var(--border)"
+                                    }}>
+                                    {getTeamAbbr(game.away_team)}{game.winner === "away" ? " ✓" : ""}
+                                  </button>
+                                </div>
+                              ) : (
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+                                  <div style={{ display: "flex", gap: 4 }}>
+                                    <button style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(34,197,94,0.2)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.4)", whiteSpace: "nowrap" }}
+                                      onClick={() => resetAndRegrade(game.id, "home")}>
+                                      {getTeamAbbr(game.home_team)}
+                                    </button>
+                                    <button style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", background: "rgba(59,130,246,0.1)", color: "var(--accent2)", border: "1px solid rgba(59,130,246,0.2)", whiteSpace: "nowrap" }}
+                                      onClick={() => resetAndRegrade(game.id, "away")}>
+                                      {getTeamAbbr(game.away_team)}
+                                    </button>
+                                  </div>
+                                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                    <span style={{ fontSize: 10, color: "var(--gold)" }}>⚠️ 재채점</span>
+                                    <button style={{ fontSize: 10, color: "var(--text-muted)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                                      onClick={() => setRegradeGameId(null)}>취소</button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* 점 네비게이터 (5경기 이상) */}
+                      {totalPages > 1 && (
+                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, padding: "6px 0 2px" }}>
+                          {Array.from({ length: totalPages }).map((_, i) => (
+                            <button key={i} onClick={() => setGamePage(i + 1)} style={{
+                              width: i === gamePage - 1 ? 7 : 5, height: i === gamePage - 1 ? 7 : 5,
+                              borderRadius: "50%",
+                              background: i === gamePage - 1 ? "var(--text)" : "rgba(150,150,150,0.5)",
+                              border: "none", padding: 0, cursor: "pointer", transition: "all 0.2s", flexShrink: 0,
+                            }} />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                </>}
 
               </>}
 
@@ -1364,9 +1376,11 @@ export default function AdminPage() {
                       {(["post", "regular"] as const).map((type) => (
                         <button key={type}
                           onClick={() => setStatsSeasonType(type)}
-                          style={{ flex: 1, padding: "7px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none",
+                          style={{
+                            flex: 1, padding: "7px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none",
                             background: statsSeasonType === type ? "var(--accent)" : "var(--surface2)",
-                            color: statsSeasonType === type ? "#fff" : "var(--text-muted)" }}>
+                            color: statsSeasonType === type ? "#fff" : "var(--text-muted)"
+                          }}>
                           {type === "regular" ? "정규시즌" : "포스트시즌"}
                         </button>
                       ))}
