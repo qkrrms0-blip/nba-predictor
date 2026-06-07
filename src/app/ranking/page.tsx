@@ -115,8 +115,15 @@ export default function RankingPage() {
     return "";
   };
 
+  // 2열 배치: [1,9], [2,10], ... 순서로 재배열
+  // 왼쪽 열: idx 0~7 (1~8위), 오른쪽 열: idx 8~15 (9~16위)
+  const half = Math.ceil(rankings.length / 2);
+  const leftCol = rankings.slice(0, half);
+  const rightCol = rankings.slice(half);
+
   return (
     <>
+      {/* 시즌 선택 드롭다운 */}
       <div className="filter-row" style={{ marginBottom: 10 }}>
         <select
           className="filter-select"
@@ -125,7 +132,7 @@ export default function RankingPage() {
         >
           {seasons.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.name} {s.is_active ? "🔴" : ""}
+              {s.is_active ? "🟢" : "🔴"} {s.name}
             </option>
           ))}
         </select>
@@ -139,32 +146,85 @@ export default function RankingPage() {
           <div className="empty-title">아직 데이터가 없습니다</div>
         </div>
       ) : (
-        rankings.map((entry, idx) => {
-          const rank = getRank(idx);
-          return (
-            <div
-              key={entry.id}
-              className="rank-card"
-              style={entry.id === myId ? { borderColor: "var(--accent2)" } : {}}
-            >
-              <div className={`rank-num ${getRankClass(rank)}`}>
-                {getRankDisplay(rank)}
-              </div>
-              <div className="rank-info">
-                <div className="rank-name">
-                  {entry.name}
-                  {entry.id === myId && (
-                    <span style={{ fontSize: 11, color: "var(--accent2)", marginLeft: 6 }}>나</span>
-                  )}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "6px",
+            padding: "0 2px",
+          }}
+        >
+          {leftCol.map((entry, colIdx) => {
+            const idx = colIdx;
+            const rank = getRank(idx);
+            const rightEntry = rightCol[colIdx];
+            const rightIdx = half + colIdx;
+            const rightRank = rightEntry ? getRank(rightIdx) : null;
+
+            return (
+              <div
+                key={`row-${colIdx}`}
+                style={{ display: "contents" }}
+              >
+                {/* 왼쪽 카드 */}
+                <div
+                  className="rank-card"
+                  style={{
+                    ...(entry.id === myId ? { borderColor: "var(--accent2)" } : {}),
+                    padding: "8px 6px",
+                    minWidth: 0,
+                  }}
+                >
+                  <div className={`rank-num ${getRankClass(rank)}`} style={{ minWidth: 28, fontSize: 15 }}>
+                    {getRankDisplay(rank)}
+                  </div>
+                  <div className="rank-info" style={{ minWidth: 0, flex: 1 }}>
+                    <div className="rank-name" style={{ fontSize: 13 }}>
+                      {entry.name}
+                      {entry.id === myId && (
+                        <span style={{ fontSize: 10, color: "var(--accent2)", marginLeft: 4 }}>나</span>
+                      )}
+                    </div>
+                    <div className="rank-sub" style={{ fontSize: 10 }}>
+                      {entry.correct_votes}/{entry.total_votes} · {entry.accuracy_pct}%
+                    </div>
+                  </div>
+                  <div className="rank-points" style={{ fontSize: 13, whiteSpace: "nowrap" }}>{entry.total_points}</div>
                 </div>
-                <div className="rank-sub">
-                  {entry.correct_votes}/{entry.total_votes} 적중 · {entry.accuracy_pct}%
-                </div>
+
+                {/* 오른쪽 카드 (없으면 빈 칸) */}
+                {rightEntry ? (
+                  <div
+                    className="rank-card"
+                    style={{
+                      ...(rightEntry.id === myId ? { borderColor: "var(--accent2)" } : {}),
+                      padding: "8px 6px",
+                      minWidth: 0,
+                    }}
+                  >
+                    <div className={`rank-num ${getRankClass(rightRank!)}`} style={{ minWidth: 28, fontSize: 15 }}>
+                      {getRankDisplay(rightRank!)}
+                    </div>
+                    <div className="rank-info" style={{ minWidth: 0, flex: 1 }}>
+                      <div className="rank-name" style={{ fontSize: 13 }}>
+                        {rightEntry.name}
+                        {rightEntry.id === myId && (
+                          <span style={{ fontSize: 10, color: "var(--accent2)", marginLeft: 4 }}>나</span>
+                        )}
+                      </div>
+                      <div className="rank-sub" style={{ fontSize: 10 }}>
+                        {rightEntry.correct_votes}/{rightEntry.total_votes} · {rightEntry.accuracy_pct}%
+                      </div>
+                    </div>
+                    <div className="rank-points" style={{ fontSize: 13, whiteSpace: "nowrap" }}>{rightEntry.total_points}</div>
+                  </div>
+                ) : (
+                  <div />
+                )}
               </div>
-              <div className="rank-points">{entry.total_points}</div>
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
       )}
     </>
   );
