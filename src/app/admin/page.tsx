@@ -210,6 +210,7 @@ export default function AdminPage() {
   const [espnEndDate, setEspnEndDate] = useState(format(addDays(new Date(), 30), "yyyy-MM-dd"));
   const [espnLoading, setEspnLoading] = useState(false);
   const [espnResult, setEspnResult] = useState<string>("");
+  const [espnPickerOpen, setEspnPickerOpen] = useState(false);
   const [espnLastSync, setEspnLastSync] = useState<string>("");
   const [gradeLoading, setGradeLoading] = useState(false);
   // 경기 추가 폼 접기/펼치기 (기본: 접힘)
@@ -653,56 +654,26 @@ export default function AdminPage() {
               {/* ── 1페이지: 자동등록 + 채점대기 ── */}
               {gameTabPage === 0 && <>
 
-              {/* ESPN 경기 가져오기 */}
+              {/* ESPN 경기 등록하기 */}
               <div className="card" style={{ marginBottom: 12, overflow: "visible" }}>
                 <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
                   🏀 경기 자동 등록
                 </div>
 
-                {/* 날짜 범위 2열 */}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
-                    <label className="form-label">시작일</label>
-                    <ThemeProvider theme={darkTheme}>
-                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
-                      <DatePicker
-                        value={dayjs(espnStartDate)}
-                        onChange={(d: Dayjs | null) => d && setEspnStartDate(d.format("YYYY-MM-DD"))}
-                        format="YY.MM.DD"
-                        slotProps={{
-                          textField: {
-                            size: "small",
-                            sx: muiInputSx,
-                            style: { width: "100%" },
-                          },
-                        }}
-                      />
-                    </LocalizationProvider>
-                    </ThemeProvider>
-                  </div>
-                  <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
-                    <label className="form-label">종료일</label>
-                    <ThemeProvider theme={darkTheme}>
-                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
-                      <DatePicker
-                        value={dayjs(espnEndDate)}
-                        onChange={(d: Dayjs | null) => d && setEspnEndDate(d.format("YYYY-MM-DD"))}
-                        format="YY.MM.DD"
-                        slotProps={{
-                          textField: {
-                            size: "small",
-                            sx: muiInputSx,
-                            style: { width: "100%" },
-                          },
-                        }}
-                      />
-                    </LocalizationProvider>
-                    </ThemeProvider>
-                  </div>
+                {/* 경기 등록하기 + 자동채점 2열 */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                  <button className="btn-primary" style={{ flex: 1 }}
+                    onClick={() => setEspnPickerOpen(true)} disabled={espnLoading}>
+                    {espnLoading ? "등록 중..." : "경기 등록하기"}
+                  </button>
+                  <button className="btn-primary" style={{ flex: 1, background: "var(--accent2)" }}
+                    onClick={gradeGamesAuto} disabled={gradeLoading}>
+                    {gradeLoading ? "채점 중..." : "자동채점"}
+                  </button>
                 </div>
 
                 {/* 현재 등록된 경기 수(위너없음) + 마지막 실행 날짜 뱃지 */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{
                     border: "1.5px solid #ff8c00",
                     borderRadius: 20,
@@ -731,18 +702,6 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* 경기 가져오기 + 자동채점 2열 */}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn-primary" style={{ flex: 1 }}
-                    onClick={syncESPN} disabled={espnLoading}>
-                    {espnLoading ? "가져오는 중..." : "경기 가져오기"}
-                  </button>
-                  <button className="btn-primary" style={{ flex: 1, background: "var(--accent2)" }}
-                    onClick={gradeGamesAuto} disabled={gradeLoading}>
-                    {gradeLoading ? "채점 중..." : "자동채점 실행"}
-                  </button>
-                </div>
-
                 {espnResult && (
                   <div style={{
                     marginTop: 10, padding: "8px 12px", borderRadius: 8,
@@ -751,6 +710,58 @@ export default function AdminPage() {
                     fontSize: 13, fontWeight: 600,
                   }}>
                     {espnResult}
+                  </div>
+                )}
+
+                {/* 날짜 선택 팝업 */}
+                {espnPickerOpen && (
+                  <div style={{
+                    position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
+                    display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+                  }} onClick={() => setEspnPickerOpen(false)}>
+                    <div style={{
+                      background: "var(--surface)", border: "1px solid var(--border)",
+                      borderRadius: 14, padding: "24px 20px", width: "100%", maxWidth: 320,
+                    }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>날짜 범위 선택</div>
+                        <button onClick={() => setEspnPickerOpen(false)}
+                          style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="form-label">시작일</label>
+                          <ThemeProvider theme={darkTheme}>
+                          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                            <DatePicker
+                              value={dayjs(espnStartDate)}
+                              onChange={(d: Dayjs | null) => d && setEspnStartDate(d.format("YYYY-MM-DD"))}
+                              format="YY.MM.DD"
+                              slotProps={{ textField: { size: "small", sx: muiInputSx, style: { width: "100%" } } }}
+                            />
+                          </LocalizationProvider>
+                          </ThemeProvider>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label className="form-label">종료일</label>
+                          <ThemeProvider theme={darkTheme}>
+                          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                            <DatePicker
+                              value={dayjs(espnEndDate)}
+                              onChange={(d: Dayjs | null) => d && setEspnEndDate(d.format("YYYY-MM-DD"))}
+                              format="YY.MM.DD"
+                              slotProps={{ textField: { size: "small", sx: muiInputSx, style: { width: "100%" } } }}
+                            />
+                          </LocalizationProvider>
+                          </ThemeProvider>
+                        </div>
+                      </div>
+                      <button className="btn-primary" style={{ width: "100%" }}
+                        onClick={() => { setEspnPickerOpen(false); syncESPN(); }}
+                        disabled={espnLoading}>
+                        {espnLoading ? "가져오는 중..." : "가져오기"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

@@ -69,10 +69,13 @@ export async function POST(request: Request) {
       }
 
       // winner, status, start_time 중 하나라도 바뀐 경우만 upsert
+      const normalizeTime = (t: string | null) =>
+        t ? new Date(t).toISOString() : null;
+
       const changed =
         existingData.winner !== dbGame.winner ||
         existingData.status !== dbGame.status ||
-        existingData.start_time !== dbGame.start_time;
+        normalizeTime(existingData.start_time) !== normalizeTime(dbGame.start_time);
 
       if (!changed) {
         unchanged++;
