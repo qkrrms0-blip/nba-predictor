@@ -499,7 +499,7 @@ export default function HistoryPage() {
           ref={calendarBtnRef}
           onClick={() => setCalendarOpen(!calendarOpen)}
           style={{
-            marginLeft: 4, flexShrink: 0, width: 32, height: 32,
+            marginLeft: "auto", flexShrink: 0, width: 32, height: 32,
             borderRadius: 8, border: "1px solid var(--border)",
             background: calendarOpen ? "var(--accent)" : "var(--surface2)",
             color: calendarOpen ? "#fff" : "var(--text-muted)",
@@ -524,7 +524,7 @@ export default function HistoryPage() {
               const btn = calendarBtnRef.current;
               if (!btn) return 64;
               const rect = btn.getBoundingClientRect();
-              return Math.max(rect.bottom + 6, 64);
+              return Math.max(rect.bottom + 6, 76);
             })(),
             right: (() => {
               const btn = calendarBtnRef.current;
