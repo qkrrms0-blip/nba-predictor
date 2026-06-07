@@ -161,7 +161,8 @@ export default function VotingPage() {
     let i = 0, currentRank = 1;
     while (i < sorted.length && groups.length < 3) {
       const sameScore = sorted.filter((d) => d.total_points === sorted[i].total_points);
-      groups.push({ rank: currentRank, entries: sameScore });
+      const shuffled = [...sameScore].sort(() => Math.random() - 0.5);
+      groups.push({ rank: currentRank, entries: shuffled });
       currentRank += sameScore.length;
       i += sameScore.length;
     }
@@ -356,17 +357,28 @@ export default function VotingPage() {
               <span style={{ fontSize: group.rank === 1 ? 22 : 18, lineHeight: 1 }}>
                 {rankIcon(group.rank)}
               </span>
-              {group.entries.map((entry) => (
-                <span key={entry.id} style={{
-                  fontSize: 13, fontWeight: group.rank === 1 ? 700 : 600,
-                  color: "var(--text)", textAlign: "center", lineHeight: 1.3,
-                }}>
-                  {entry.name}
-                  {entry.id === userId && (
-                    <span style={{ fontSize: 10, color: "var(--accent2)", marginLeft: 3 }}>나</span>
-                  )}
-                </span>
-              ))}
+              {(() => {
+                const rep = group.entries[0];
+                const rest = group.entries.length - 1;
+                return (
+                  <>
+                    <span style={{
+                      fontSize: 13, fontWeight: group.rank === 1 ? 700 : 600,
+                      color: "var(--text)", textAlign: "center", lineHeight: 1.3,
+                    }}>
+                      {rep.name}
+                      {rep.id === userId && (
+                        <span style={{ fontSize: 10, color: "var(--accent2)", marginLeft: 3 }}>나</span>
+                      )}
+                    </span>
+                    {rest > 0 && (
+                      <span style={{ fontSize: 10, color: "#22c55e", lineHeight: 1 }}>
+                        +{rest}
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>
@@ -374,22 +386,22 @@ export default function VotingPage() {
 
       {/* 날짜 탭 + 투표현황 한 줄 */}
       <div style={{ display: "flex", alignItems: "center", padding: "6px 0" }}>
-      <div className="date-tabs" style={{ padding: 0, flex: 1 }}>
-        {DATE_TABS.map((tab) => {
-          const date = addDays(new Date(), tab.offset);
-          const dateStr = format(date, "M/d (EEE)", { locale: ko });
-          return (
-            <button
-              key={tab.offset}
-              className={`date-tab ${dateOffset === tab.offset ? "active" : ""}`}
-              onClick={() => setDateOffset(tab.offset)}
-            >
-              {tab.label}
-              <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 1 }}>{dateStr}</span>
-            </button>
-          );
-        })}
-      </div>
+        <div className="date-tabs" style={{ padding: 0, flex: 1 }}>
+          {DATE_TABS.map((tab) => {
+            const date = addDays(new Date(), tab.offset);
+            const dateStr = format(date, "M/d (EEE)", { locale: ko });
+            return (
+              <button
+                key={tab.offset}
+                className={`date-tab ${dateOffset === tab.offset ? "active" : ""}`}
+                onClick={() => setDateOffset(tab.offset)}
+              >
+                {tab.label}
+                <span style={{ display: "block", fontSize: 10, opacity: 0.7, marginTop: 1 }}>{dateStr}</span>
+              </button>
+            );
+          })}
+        </div>
         {totalVotableCount > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, color: "var(--text-muted)", flexShrink: 0, paddingLeft: 8 }}>
             <span style={{ fontWeight: 700, color: myVoteCount === totalVotableCount ? "var(--green)" : "var(--text)" }}>{myVoteCount}</span>
@@ -438,160 +450,168 @@ export default function VotingPage() {
             )}
 
             {pagedGames.map((game) => {
-          const closed = isDeadlinePassed(game);
-          const isRegular = !ROUND_POINTS[game.round];
-          const pts = ROUND_POINTS[game.round];
-          const totalVotes = game.totalVotes || 0;
-          const homePct = totalVotes > 0 ? Math.round((game.homeVotes || 0) / totalVotes * 100) : 50;
-          const awayPct = 100 - homePct;
+              const closed = isDeadlinePassed(game);
+              const isRegular = !ROUND_POINTS[game.round];
+              const pts = ROUND_POINTS[game.round];
+              const totalVotes = game.totalVotes || 0;
+              const homePct = totalVotes > 0 ? Math.round((game.homeVotes || 0) / totalVotes * 100) : 50;
+              const awayPct = 100 - homePct;
 
-          const isInactive = (game as any).status === "postponed" || (game as any).status === "cancelled";
-          const stampLabel = (game as any).status === "postponed" ? "POSTPONED" : "CANCELLED";
+              const isInactive = (game as any).status === "postponed" || (game as any).status === "cancelled";
+              const stampLabel = (game as any).status === "postponed" ? "POSTPONED" : "CANCELLED";
 
-          return (
-            <div key={game.id} className="game-card-compact" style={{ position: "relative", opacity: isInactive ? 0.45 : 1, pointerEvents: isInactive ? "none" : "auto" }}>
-              {isInactive && (
-                <div style={{
-                  position: "absolute", top: "50%", left: "50%",
-                  transform: "translate(-50%, -50%) rotate(-20deg)",
-                  border: "3px solid #ef4444", borderRadius: 6,
-                  padding: "3px 10px", color: "#ef4444",
-                  fontSize: 16, fontWeight: 700, letterSpacing: 2,
-                  whiteSpace: "nowrap", opacity: 0.85, zIndex: 10,
-                  pointerEvents: "none",
-                }}>
-                  {stampLabel}
-                </div>
-              )}
-              {/* 팀 로고 + 원형버튼 + VS메타 */}
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              return (
+                <div key={game.id} className="game-card-compact" style={{ position: "relative", opacity: isInactive ? 0.45 : 1, pointerEvents: isInactive ? "none" : "auto" }}>
+                  {isInactive && (
+                    <div style={{
+                      position: "absolute", top: "50%", left: "50%",
+                      transform: "translate(-50%, -50%) rotate(-20deg)",
+                      border: "3px solid #ef4444", borderRadius: 6,
+                      padding: "3px 10px", color: "#ef4444",
+                      fontSize: 16, fontWeight: 700, letterSpacing: 2,
+                      whiteSpace: "nowrap", opacity: 0.85, zIndex: 10,
+                      pointerEvents: "none",
+                    }}>
+                      {stampLabel}
+                    </div>
+                  )}
+                  {/* 팀 로고 + 원형버튼 + VS메타 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
 
-                {/* 왼쪽: 포스트시즌 라운드명 */}
-                <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {!isRegular && (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                      <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
-                        {game.round.replace(" ", "\n")}
+                    {/* 왼쪽: 포스트시즌 라운드명 */}
+                    <div style={{ width: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {!isRegular && (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                          <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-wrap", wordBreak: "keep-all", background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 4, padding: "1px 4px" }}>
+                            {game.round.replace(" ", "\n")}
+                          </span>
+                          {pts && (
+                            <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
+                              {pts}pt
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 홈팀: 버튼(바깥) | 로고(VS쪽) */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                      <button
+                        className={`vote-circle-btn${game.myVote?.voted_team === "home" ? " selected-home" : ""}`}
+                        onClick={() => !closed && handleVote(game.id, "home", game.season_id)}
+                        disabled={closed}
+                      >
+                        {game.myVote?.voted_team === "home" ? "✓" : "승"}
+                      </button>
+                      <img
+                        src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
+                        style={{
+                          width: 56, height: 56, objectFit: "contain", flexShrink: 0,
+                          filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))",
+                          opacity: game.winner && game.winner !== "home" ? 0.35 : 1
+                        }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                      />
+                    </div>
+
+                    {/* 가운데 VS 메타블록: 시간 / 점수or VS / 마감 */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, minWidth: 72 }}>
+                      <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                        {format(new Date(game.start_time), "HH:mm")}
                       </span>
-                      {pts && (
-                        <span style={{ fontSize: 9, fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.4)", borderRadius: 4, padding: "1px 4px", whiteSpace: "nowrap" }}>
-                          {pts}pt
+                      {game.winner ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{
+                            fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
+                            color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)"
+                          }}>
+                            {game.home_score ?? "-"}
+                          </span>
+                          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>:</span>
+                          <span style={{
+                            fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
+                            color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)"
+                          }}>
+                            {game.away_score ?? "-"}
+                          </span>
+                        </div>
+                      ) : (
+                        <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--text-muted)", lineHeight: 1.1 }}>
+                          VS
                         </span>
+                      )}
+                      {game.winner ? (
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>최종</span>
+                      ) : game.vote_deadline ? (
+                        closed
+                          ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>투표 마감</span>
+                          : <span style={{ fontSize: 10, color: "#ef4444", whiteSpace: "nowrap" }}>
+                            마감 {format(new Date(game.vote_deadline), "M/d HH:mm")}
+                          </span>
+                      ) : null}
+                    </div>
+
+                    {/* 원정팀: 로고(VS쪽) | 버튼(바깥) */}
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 6 }}>
+                      <img
+                        src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
+                        style={{
+                          width: 56, height: 56, objectFit: "contain", flexShrink: 0,
+                          filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))",
+                          opacity: game.winner && game.winner !== "away" ? 0.35 : 1
+                        }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                      />
+                      <button
+                        className={`vote-circle-btn${game.myVote?.voted_team === "away" ? " selected-away" : ""}`}
+                        onClick={() => !closed && handleVote(game.id, "away", game.season_id)}
+                        disabled={closed}
+                      >
+                        {game.myVote?.voted_team === "away" ? "✓" : "승"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 마감 후 또는 정산된 경기: 퍼센트 바 */}
+                  {(closed || game.winner) && totalVotes > 0 && (
+                    <div className="vote-stats" style={{ marginTop: 8 }}>
+                      <span className="vote-pct">{homePct}%</span>
+                      <div className="vote-bar">
+                        <div className="vote-bar-fill" style={{ width: `${homePct}%` }} />
+                      </div>
+                      <span className="vote-pct">{awayPct}%</span>
+                    </div>
+                  )}
+
+                  {/* 정산된 경기: 적중자 */}
+                  {game.winner && (
+                    <div style={{ marginTop: 6 }}>
+                      <button
+                        onClick={() => setExpandedGame(expandedGame === game.id ? null : game.id)}
+                        style={{
+                          width: "100%", textAlign: "left", background: "var(--surface2)",
+                          border: "1px solid var(--border)", borderRadius: 8,
+                          padding: "5px 10px", fontSize: 12, color: "var(--text-muted)", cursor: "pointer",
+                        }}>
+                        적중자 {game.correctCount}명 {expandedGame === game.id ? "▲" : "▼"}
+                      </button>
+                      {expandedGame === game.id && (game.correctCount ?? 0) > 0 && (
+                        <div style={{
+                          marginTop: 6, padding: "6px 10px",
+                          background: "rgba(34,197,94,0.08)",
+                          borderRadius: 6, fontSize: 13, lineHeight: 1.8,
+                        }}>
+                          {game.correctVoters?.map((voter, i) => (
+                            <span key={i}>
+                              {voter.name}{i < (game.correctVoters?.length ?? 0) - 1 ? "\u00A0 " : ""}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
                 </div>
-
-                {/* 홈팀: 버튼(바깥) | 로고(VS쪽) */}
-                <div style={{ flex: 1, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                  <button
-                    className={`vote-circle-btn${game.myVote?.voted_team === "home" ? " selected-home" : ""}`}
-                    onClick={() => !closed && handleVote(game.id, "home", game.season_id)}
-                    disabled={closed}
-                  >
-                    {game.myVote?.voted_team === "home" ? "✓" : "승"}
-                  </button>
-                  <img
-                    src={getTeamLogoUrl(game.home_team)} alt={game.home_team}
-                    style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0,
-                      filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))",
-                      opacity: game.winner && game.winner !== "home" ? 0.35 : 1 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                  />
-                </div>
-
-                {/* 가운데 VS 메타블록: 시간 / 점수or VS / 마감 */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, flexShrink: 0, minWidth: 72 }}>
-                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                    {format(new Date(game.start_time), "HH:mm")}
-                  </span>
-                  {game.winner ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
-                        color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
-                        {game.home_score ?? "-"}
-                      </span>
-                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>:</span>
-                      <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap",
-                        color: game.winner === "away" ? "#3b82f6" : "var(--text-muted)" }}>
-                        {game.away_score ?? "-"}
-                      </span>
-                    </div>
-                  ) : (
-                    <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--text-muted)", lineHeight: 1.1 }}>
-                      VS
-                    </span>
-                  )}
-                  {game.winner ? (
-                    <span style={{ fontSize: 10, color: "var(--text-muted)" }}>최종</span>
-                  ) : game.vote_deadline ? (
-                    closed
-                      ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>투표 마감</span>
-                      : <span style={{ fontSize: 10, color: "#ef4444", whiteSpace: "nowrap" }}>
-                          마감 {format(new Date(game.vote_deadline), "M/d HH:mm")}
-                        </span>
-                  ) : null}
-                </div>
-
-                {/* 원정팀: 로고(VS쪽) | 버튼(바깥) */}
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 6 }}>
-                  <img
-                    src={getTeamLogoUrl(game.away_team)} alt={game.away_team}
-                    style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0,
-                      filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))",
-                      opacity: game.winner && game.winner !== "away" ? 0.35 : 1 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
-                  />
-                  <button
-                    className={`vote-circle-btn${game.myVote?.voted_team === "away" ? " selected-away" : ""}`}
-                    onClick={() => !closed && handleVote(game.id, "away", game.season_id)}
-                    disabled={closed}
-                  >
-                    {game.myVote?.voted_team === "away" ? "✓" : "승"}
-                  </button>
-                </div>
-              </div>
-
-              {/* 마감 후 또는 정산된 경기: 퍼센트 바 */}
-              {(closed || game.winner) && totalVotes > 0 && (
-                <div className="vote-stats" style={{ marginTop: 8 }}>
-                  <span className="vote-pct">{homePct}%</span>
-                  <div className="vote-bar">
-                    <div className="vote-bar-fill" style={{ width: `${homePct}%` }} />
-                  </div>
-                  <span className="vote-pct">{awayPct}%</span>
-                </div>
-              )}
-
-              {/* 정산된 경기: 적중자 */}
-              {game.winner && (
-                <div style={{ marginTop: 6 }}>
-                  <button
-                    onClick={() => setExpandedGame(expandedGame === game.id ? null : game.id)}
-                    style={{
-                      width: "100%", textAlign: "left", background: "var(--surface2)",
-                      border: "1px solid var(--border)", borderRadius: 8,
-                      padding: "5px 10px", fontSize: 12, color: "var(--text-muted)", cursor: "pointer",
-                    }}>
-                    적중자 {game.correctCount}명 {expandedGame === game.id ? "▲" : "▼"}
-                  </button>
-                  {expandedGame === game.id && (game.correctCount ?? 0) > 0 && (
-                    <div style={{
-                      marginTop: 6, padding: "6px 10px",
-                      background: "rgba(34,197,94,0.08)",
-                      borderRadius: 6, fontSize: 13, lineHeight: 1.8,
-                    }}>
-                      {game.correctVoters?.map((voter, i) => (
-                        <span key={i}>
-                          {voter.name}{i < (game.correctVoters?.length ?? 0) - 1 ? "\u00A0 " : ""}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
+              );
             })}
           </>
         );

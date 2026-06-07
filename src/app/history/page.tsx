@@ -41,6 +41,7 @@ export default function HistoryPage() {
   const [seasonTypeFilter, setSeasonTypeFilter] = useState<"regular" | "post">("post");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [monthClicked, setMonthClicked] = useState(false); // 유저가 월을 직접 클릭했는지
 
   // 월 캐러셀
   const monthScrollRef = useRef<HTMLDivElement>(null);
@@ -58,6 +59,14 @@ export default function HistoryPage() {
   // 월 캐러셀 마우스 드래그
   const monthMouseStartX = useRef<number | null>(null);
   const monthMouseStartScroll = useRef(0);
+
+  // 일 캐러셀
+  const dayScrollRef = useRef<HTMLDivElement>(null);
+  const dayMouseStartX = useRef<number | null>(null);
+  const dayMouseStartScroll = useRef(0);
+
+  // 달력 버튼 ref (팝업 위치 계산용)
+  const calendarBtnRef = useRef<HTMLButtonElement>(null);
 
   // 시즌 목록 초기 로드
   useEffect(() => {
@@ -93,6 +102,7 @@ export default function HistoryPage() {
     setFilterMonth(null);
     setFilterDay(null);
     setPageIndex(0);
+    setMonthClicked(false);
 
     const { data: { user } } = await supabase.auth.getUser();
     const currentUserId = user?.id || userId;
@@ -141,7 +151,7 @@ export default function HistoryPage() {
     setLoading(false);
   };
 
-  // 최신 경기 날짜로 월+일 자동 선택
+  // 최신 경기 날짜로 월 캐러셀 위치만 자동 이동 (일 선택은 월 클릭 후)
   const autoSelectLatest = useCallback((typeFiltered: GameResult[], type: "regular" | "post", allResults?: GameResult[]) => {
     if (typeFiltered.length === 0) return;
     const latest = typeFiltered[0]; // 내림차순이므로 첫 번째가 최신
@@ -178,6 +188,7 @@ export default function HistoryPage() {
     const d = new Date(dateStr);
     setFilterMonth(format(d, "MM"));
     setFilterDay(String(d.getDate()));
+    setMonthClicked(true);
     setCalendarOpen(false);
   };
 
@@ -265,6 +276,7 @@ export default function HistoryPage() {
     setFilterMonth(null);
     setFilterDay(null);
     setPageIndex(0);
+    setMonthClicked(false);
     if (allSeasonGames.length === 0) return;
     const typeFiltered = allSeasonGames.filter((g) => !g.season_type || g.season_type === seasonTypeFilter);
     autoSelectLatest(typeFiltered, seasonTypeFilter);
@@ -282,6 +294,19 @@ export default function HistoryPage() {
     el.scrollLeft = monthMouseStartScroll.current - (e.clientX - monthMouseStartX.current);
   };
   const handleMonthMouseUp = () => { monthMouseStartX.current = null; };
+
+  // 일 캐러셀 마우스 드래그 (PC)
+  const handleDayMouseDown = (e: React.MouseEvent) => {
+    dayMouseStartX.current = e.clientX;
+    dayMouseStartScroll.current = dayScrollRef.current?.scrollLeft ?? 0;
+  };
+  const handleDayMouseMove = (e: React.MouseEvent) => {
+    if (dayMouseStartX.current === null) return;
+    const el = dayScrollRef.current;
+    if (!el) return;
+    el.scrollLeft = dayMouseStartScroll.current - (e.clientX - dayMouseStartX.current);
+  };
+  const handleDayMouseUp = () => { dayMouseStartX.current = null; };
 
   // 페이지 네비게이션 — window 이벤트
   const goNext = useCallback(() => setPageIndex((p) => { const n = Math.min(p + 1, totalPagesRef.current - 1); return n; }), []);
@@ -329,6 +354,7 @@ export default function HistoryPage() {
     scrollToIndex(idx);
     setFilterMonth(filterMonth === m ? null : m);
     setFilterDay(null);
+    setMonthClicked(true);
   };
   // ────────────────────────────────────────────────────
 
@@ -439,6 +465,7 @@ export default function HistoryPage() {
 
         {/* 달력 버튼 */}
         <button
+          ref={calendarBtnRef}
           onClick={() => setCalendarOpen(!calendarOpen)}
           style={{
             marginLeft: 4, flexShrink: 0, width: 32, height: 32,
@@ -452,12 +479,29 @@ export default function HistoryPage() {
         </button>
       </div>
 
-      {/* 달력 패널 */}
+      {/* 달력 팝업 오버레이 */}
       {calendarOpen && (
-        <div style={{
-          background: "var(--surface)", border: "1px solid var(--border)",
-          borderRadius: "var(--radius)", padding: "12px", marginBottom: 10,
-        }}>
+        <>
+          {/* 배경 클릭 시 닫기 */}
+          <div
+            onClick={() => setCalendarOpen(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 99 }}
+          />
+          <div style={{
+            position: "fixed",
+            top: (() => {
+              const btn = calendarBtnRef.current;
+              if (!btn) return 60;
+              const rect = btn.getBoundingClientRect();
+              return rect.bottom + 6;
+            })(),
+            right: 12,
+            zIndex: 100,
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", padding: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            width: 280,
+          }}>
           {/* 달력 헤더 */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <button onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
@@ -521,45 +565,74 @@ export default function HistoryPage() {
               return cells;
             })()}
           </div>
-        </div>
+          </div>
+        </>
       )}
 
-      {/* ── 일 선택 버튼 (월 버튼과 동일 스타일) ── */}
-      {filterMonth && daysWithGames.length > 0 && (
-        <div style={{
-          display: "flex", gap: 6, flexWrap: "wrap",
-          marginBottom: 14,
-          paddingLeft: 2,
-        }}>
-          {/* 전체 버튼 */}
+      {/* ── 일 캐러셀 (월 눌렀을 때만 표시) ── */}
+      {monthClicked && filterMonth && daysWithGames.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+          {/* 전체 버튼 - 고정 */}
           <button
             onClick={() => setFilterDay(null)}
             style={{
-              padding: "5px 14px", borderRadius: 20,
-              background: filterDay === null ? "var(--accent2)" : "var(--surface2)",
+              flexShrink: 0,
+              width: 36, height: 36,
+              borderRadius: "50%",
+              background: filterDay === null ? "var(--accent2)" : "transparent",
               color: filterDay === null ? "#fff" : "var(--text-muted)",
-              border: filterDay === null ? "none" : "1px solid var(--border)",
-              fontWeight: 600, fontSize: 13, cursor: "pointer",
+              border: filterDay === null ? "2px solid var(--accent2)" : "2px solid var(--border)",
+              fontWeight: 700, fontSize: 11, cursor: "pointer",
               transition: "all 0.15s",
-              whiteSpace: "nowrap",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              lineHeight: 1,
             }}>
             전체
           </button>
 
-          {daysWithGames.map((day) => (
-            <button key={day} onClick={() => setFilterDay(String(day))}
+          {/* 일 캐러셀 */}
+          <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+            <div
+              ref={dayScrollRef}
+              onMouseDown={handleDayMouseDown}
+              onMouseMove={handleDayMouseMove}
+              onMouseUp={handleDayMouseUp}
+              onMouseLeave={handleDayMouseUp}
               style={{
-                padding: "5px 12px", borderRadius: 20,
-                background: filterDay === String(day) ? "var(--accent2)" : "var(--surface2)",
-                color: filterDay === String(day) ? "#fff" : "var(--text)",
-                border: filterDay === String(day) ? "none" : "1px solid var(--border)",
-                fontWeight: 600, fontSize: 13, cursor: "pointer",
-                transition: "all 0.15s",
-                whiteSpace: "nowrap",
-              }}>
-              {day}일
-            </button>
-          ))}
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                overflowX: "auto",
+                scrollbarWidth: "none",
+                WebkitOverflowScrolling: "touch",
+                cursor: "grab",
+                userSelect: "none",
+              }}
+            >
+              {daysWithGames.map((day) => {
+                const isSelected = filterDay === String(day);
+                return (
+                  <button
+                    key={day}
+                    onClick={() => setFilterDay(String(day))}
+                    style={{
+                      flexShrink: 0,
+                      width: 36, height: 36,
+                      borderRadius: "50%",
+                      background: isSelected ? "var(--accent2)" : "transparent",
+                      color: isSelected ? "#fff" : "var(--text)",
+                      border: isSelected ? "2px solid var(--accent2)" : "2px solid var(--border)",
+                      fontWeight: 700, fontSize: 13, cursor: "pointer",
+                      transition: "all 0.15s",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      lineHeight: 1,
+                    }}>
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -652,8 +725,9 @@ function PaginatedGames({ gameResults, pageIndex, setPageIndex, totalPagesRef, G
                   style={{ width: 56, height: 56, objectFit: "contain", filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))", opacity: game.winner !== "home" ? 0.35 : 1, flexShrink: 0 }}
                   onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                  <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                    {format(new Date(game.start_time), "M/d HH:mm")}
+                  <span style={{ fontSize: 11 }}>
+                    <span style={{ color: "#ffffff" }}>{format(new Date(game.start_time), "M/d")}</span>
+                    <span style={{ color: "var(--text-muted)" }}> {format(new Date(game.start_time), "HH:mm")}</span>
                   </span>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <span style={{ fontSize: 20, fontWeight: 800, whiteSpace: "nowrap", color: game.winner === "home" ? "#3b82f6" : "var(--text-muted)" }}>
