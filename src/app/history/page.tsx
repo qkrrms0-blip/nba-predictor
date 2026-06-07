@@ -192,38 +192,33 @@ export default function HistoryPage() {
     setCalendarOpen(false);
   };
 
+  // filterMonth + filterDay 통합 useEffect
   useEffect(() => {
+    setPageIndex(0);
     if (!filterMonth) {
       setDaysWithGames([]);
-      setFilterDay(null);
-      setGameResults(seasonFilteredGames);
+      setGameResults([]);
       return;
     }
-    const monthGames = seasonFilteredGames.filter((g) => {
-      return format(new Date(g.start_time), "MM") === filterMonth;
-    });
+    const monthGames = seasonFilteredGames.filter((g) =>
+      format(new Date(g.start_time), "MM") === filterMonth
+    );
     const days = Array.from(
       new Set(monthGames.map((g) => new Date(g.start_time).getDate()))
     ).sort((a, b) => a - b);
     setDaysWithGames(days);
-    // filterDay가 없을 때만 자동으로 최신 날짜 선택
-    setFilterDay((prev) => prev ?? (days.length > 0 ? String(days[days.length - 1]) : null));
-    setGameResults(monthGames);
-  }, [filterMonth, allSeasonGames, seasonTypeFilter]);
 
-  // 날짜 선택 시 필터링
-  useEffect(() => {
-    setPageIndex(0);
-    if (!filterMonth) return;
     if (filterDay === null) {
-      setGameResults(seasonFilteredGames.filter((g) => format(new Date(g.start_time), "MM") === filterMonth));
+      // 전체 버튼 없음 — 최신 날짜 자동 선택
+      const latestDay = days.length > 0 ? String(days[days.length - 1]) : null;
+      if (latestDay) setFilterDay(latestDay);
+      else setGameResults(monthGames);
     } else {
-      setGameResults(seasonFilteredGames.filter((g) => {
-        const d = new Date(g.start_time);
-        return format(d, "MM") === filterMonth && d.getDate() === Number(filterDay);
-      }));
+      const dayNum = Number(filterDay);
+      const dayGames = monthGames.filter((g) => new Date(g.start_time).getDate() === dayNum);
+      setGameResults(dayGames.length > 0 ? dayGames : monthGames);
     }
-  }, [filterDay]);
+  }, [filterMonth, filterDay, allSeasonGames, seasonTypeFilter]);
 
   // ── 월 캐러셀 로직 ──────────────────────────────────
   const ITEM_W = 52;   // 중앙 버튼 너비
@@ -439,8 +434,8 @@ export default function HistoryPage() {
 
             const scale = isCenter ? 1 : isAdjacent ? 0.85 : 0.7;
             const opacity = isCenter ? 1 : isAdjacent ? 0.7 : 0.45;
-            const fontSize = isCenter ? 13 : 12;
-            const paddingH = isCenter ? 14 : 10;
+            const fontSize = isCenter ? 12 : 11;
+            const paddingH = isCenter ? 8 : 6;
 
             return (
               <button
@@ -450,7 +445,7 @@ export default function HistoryPage() {
                 style={{
                   flexShrink: 0,
                   scrollSnapAlign: "center",
-                  padding: `5px ${paddingH}px`,
+                  padding: `3px ${paddingH}px`,
                   borderRadius: 20,
                   background: isActive ? "var(--accent)" : "var(--surface2)",
                   color: isActive ? "#fff" : "var(--text-muted)",
@@ -584,24 +579,6 @@ export default function HistoryPage() {
       {/* ── 일 캐러셀 (월 눌렀을 때만 표시) ── */}
       {monthClicked && filterMonth && daysWithGames.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-          {/* 전체 버튼 - 고정 */}
-          <button
-            onClick={() => setFilterDay(null)}
-            style={{
-              flexShrink: 0,
-              padding: "4px 10px",
-              borderRadius: 8,
-              background: filterDay === null ? "var(--accent2)" : "transparent",
-              color: filterDay === null ? "#fff" : "var(--text-muted)",
-              border: filterDay === null ? "2px solid var(--accent2)" : "2px solid var(--border)",
-              fontWeight: 700, fontSize: 11, cursor: "pointer",
-              transition: "all 0.15s",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              lineHeight: 1,
-            }}>
-            전체
-          </button>
-
           {/* 일 캐러셀 — 3일치 너비 고정 */}
           <div style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
             <div
