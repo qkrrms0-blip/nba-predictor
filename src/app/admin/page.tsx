@@ -249,6 +249,10 @@ export default function AdminPage() {
   const [monthClicked, setMonthClicked] = useState(false);
   const [endSeasonModal, setEndSeasonModal] = useState<number | null>(null);
 
+  // 월 캐러셀 refs
+  const monthScrollRef = useRef<HTMLDivElement>(null);
+  const monthMouseStartX = useRef<number | null>(null);
+  const monthMouseStartScroll = useRef(0);
   // 일 캐러셀 refs
   const dayScrollRef = useRef<HTMLDivElement>(null);
   const dayMouseStartX = useRef<number | null>(null);
@@ -586,8 +590,12 @@ export default function AdminPage() {
     if (tab !== "games") return;
     const touchStart = { x: 0 };
     const mouseStart = { x: 0, down: false };
-    const onTouchStart = (e: TouchEvent) => { touchStart.x = e.touches[0].clientX; };
+    const onTouchStart = (e: TouchEvent) => {
+      if ((e.target as HTMLElement).closest("[data-carousel]")) return;
+      touchStart.x = e.touches[0].clientX;
+    };
     const onTouchEnd = (e: TouchEvent) => {
+      if ((e.target as HTMLElement).closest("[data-carousel]")) return;
       const diff = touchStart.x - e.changedTouches[0].clientX;
       if (Math.abs(diff) > 40) diff > 0 ? gameTabGoNext() : gameTabGoPrev();
     };
@@ -1015,7 +1023,13 @@ export default function AdminPage() {
                     <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
                     {/* 월 캐러셀 — 3개 너비 고정 */}
                     <div data-carousel style={{ width: "calc(3 * 44px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
-                      <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+                      <div
+                        ref={monthScrollRef}
+                        onMouseDown={(e) => { monthMouseStartX.current = e.clientX; monthMouseStartScroll.current = monthScrollRef.current?.scrollLeft ?? 0; }}
+                        onMouseMove={(e) => { if (monthMouseStartX.current === null) return; const el = monthScrollRef.current; if (!el) return; el.scrollLeft = monthMouseStartScroll.current - (e.clientX - monthMouseStartX.current); }}
+                        onMouseUp={() => { monthMouseStartX.current = null; }}
+                        onMouseLeave={() => { monthMouseStartX.current = null; }}
+                        style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", cursor: "grab", userSelect: "none" }}>
                         {(completedSeasonType === "regular"
                           ? ["10", "11", "12", "01", "02", "03", "04"]
                           : ["04", "05", "06"]
