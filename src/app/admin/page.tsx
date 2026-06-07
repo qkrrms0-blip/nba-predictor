@@ -102,6 +102,22 @@ const darkTheme = createTheme({
   },
 });
 
+// 커스텀 달력 SVG 아이콘
+const CalendarSvgIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1" y="2.5" width="16" height="14.5" rx="2" stroke="currentColor" strokeWidth="1.4"/>
+    <line x1="1" y1="6.5" x2="17" y2="6.5" stroke="currentColor" strokeWidth="1.4"/>
+    <line x1="5" y1="1" x2="5" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    <line x1="13" y1="1" x2="13" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    <rect x="3.5" y="9" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="7.75" y="9" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="12" y="9" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="3.5" y="12.5" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="7.75" y="12.5" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+    <rect x="12" y="12.5" width="2.5" height="2" rx="0.5" fill="currentColor"/>
+  </svg>
+);
+
 // MUI DatePicker 다크테마 스타일
 const muiInputSx = {
   "& .MuiInputBase-root": {
@@ -575,10 +591,15 @@ export default function AdminPage() {
       const diff = touchStart.x - e.changedTouches[0].clientX;
       if (Math.abs(diff) > 40) diff > 0 ? gameTabGoNext() : gameTabGoPrev();
     };
-    const onMouseDown = (e: MouseEvent) => { mouseStart.x = e.clientX; mouseStart.down = true; };
+    const onMouseDown = (e: MouseEvent) => {
+      // 월 캐러셀, 일 캐러셀 내부 드래그는 페이지 넘김 무시
+      if ((e.target as HTMLElement).closest("[data-carousel]")) return;
+      mouseStart.x = e.clientX; mouseStart.down = true;
+    };
     const onMouseUp = (e: MouseEvent) => {
       if (!mouseStart.down) return;
       mouseStart.down = false;
+      if ((e.target as HTMLElement).closest("[data-carousel]")) return;
       const diff = mouseStart.x - e.clientX;
       if (Math.abs(diff) > 40) diff > 0 ? gameTabGoNext() : gameTabGoPrev();
     };
@@ -738,6 +759,7 @@ export default function AdminPage() {
                                   value={dayjs(espnStartDate)}
                                   onChange={(d: Dayjs | null) => d && setEspnStartDate(d.format("YYYY-MM-DD"))}
                                   format="YY.MM.DD"
+                                  slots={{ openPickerIcon: CalendarSvgIcon }}
                                   slotProps={{ textField: { size: "small", sx: muiInputSx, style: { width: "100%" } } }}
                                 />
                               </LocalizationProvider>
@@ -751,6 +773,7 @@ export default function AdminPage() {
                                   value={dayjs(espnEndDate)}
                                   onChange={(d: Dayjs | null) => d && setEspnEndDate(d.format("YYYY-MM-DD"))}
                                   format="YY.MM.DD"
+                                  slots={{ openPickerIcon: CalendarSvgIcon }}
                                   slotProps={{ textField: { size: "small", sx: muiInputSx, style: { width: "100%" } } }}
                                 />
                               </LocalizationProvider>
@@ -991,7 +1014,7 @@ export default function AdminPage() {
                     </div>
                     <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
                     {/* 월 캐러셀 — 3개 너비 고정 */}
-                    <div style={{ width: "calc(3 * 44px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
+                    <div data-carousel style={{ width: "calc(3 * 44px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
                       <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
                         {(completedSeasonType === "regular"
                           ? ["10", "11", "12", "01", "02", "03", "04"]
@@ -1022,9 +1045,9 @@ export default function AdminPage() {
                         border: "1.5px solid var(--accent)",
                         background: calendarOpen ? "var(--accent)" : "rgba(99,102,241,0.15)",
                         color: calendarOpen ? "#fff" : "var(--accent)",
-                        cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center"
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
                       }}>
-                      📅
+                      <CalendarSvgIcon />
                     </button>
                   </div>
 
@@ -1090,7 +1113,7 @@ export default function AdminPage() {
                   {monthClicked && daysWithGames.length > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
                       {/* 일 캐러셀 — 3일치 너비 고정 */}
-                      <div style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
+                      <div data-carousel style={{ width: "calc(3 * 36px + 2 * 6px)", flexShrink: 0, overflow: "hidden" }}>
                         <div
                           ref={dayScrollRef}
                           onMouseDown={(e) => { dayMouseStartX.current = e.clientX; dayMouseStartScroll.current = dayScrollRef.current?.scrollLeft ?? 0; }}
@@ -1126,7 +1149,7 @@ export default function AdminPage() {
 
                   {filteredGames.length === 0 ? (
                     <div className="empty-state">
-                      <div className="empty-icon">📅</div>
+                      <div className="empty-icon" style={{ display: "flex", justifyContent: "center", fontSize: 40 }}><CalendarSvgIcon /></div>
                       <div className="empty-title">해당 기간 채점된 경기가 없습니다</div>
                     </div>
                   ) : (
