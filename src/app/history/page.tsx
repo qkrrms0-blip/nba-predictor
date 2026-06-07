@@ -577,8 +577,8 @@ export default function HistoryPage() {
             onClick={() => setFilterDay(null)}
             style={{
               flexShrink: 0,
-              width: 36, height: 36,
-              borderRadius: "50%",
+              padding: "4px 10px",
+              borderRadius: 8,
               background: filterDay === null ? "var(--accent2)" : "transparent",
               color: filterDay === null ? "#fff" : "var(--text-muted)",
               border: filterDay === null ? "2px solid var(--accent2)" : "2px solid var(--border)",
@@ -617,8 +617,9 @@ export default function HistoryPage() {
                     onClick={() => setFilterDay(String(day))}
                     style={{
                       flexShrink: 0,
-                      width: 36, height: 36,
-                      borderRadius: "50%",
+                      padding: "4px 8px",
+                      minWidth: 28,
+                      borderRadius: 8,
                       background: isSelected ? "var(--accent2)" : "transparent",
                       color: isSelected ? "#fff" : "var(--text)",
                       border: isSelected ? "2px solid var(--accent2)" : "2px solid var(--border)",
