@@ -1420,7 +1420,7 @@ export default function AdminPage() {
                             background: statsSeasonType === type ? "var(--accent)" : "var(--surface2)",
                             color: statsSeasonType === type ? "#fff" : "var(--text-muted)"
                           }}>
-                          {type === "regular" ? "정규시즌" : "포스트시즌"}
+                          {type === "regular" ? "정규" : "POST"}
                         </button>
                       ))}
                     </div>
