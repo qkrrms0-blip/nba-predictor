@@ -218,7 +218,7 @@ export default function AdminPage() {
     season_id: 1,
   });
 
-  // 채점 변경용
+  // 정산 변경용
   const [regradeGameId, setRegradeGameId] = useState<number | null>(null);
 
   // ESPN 연동
@@ -231,7 +231,7 @@ export default function AdminPage() {
   const [gradeLoading, setGradeLoading] = useState(false);
   // 경기 추가 폼 접기/펼치기 (기본: 접힘)
   const [addGameOpen, setAddGameOpen] = useState(false);
-  // 채점 완료 경기 섹션 접기/펼치기 (기본: 접힘)
+  // 정산 완료 경기 섹션 접기/펼치기 (기본: 접힘)
   const [completedSectionOpen, setCompletedSectionOpen] = useState(false);
 
   // 경기 목록 필터 - 월 선택 + 날짜 선택
@@ -457,7 +457,7 @@ export default function AdminPage() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast(`✅ ${json.graded}경기 자동채점 완료`);
+        showToast(`✅ ${json.graded}경기 자동정산 완료`);
         loadData();
       } else {
         showToast(`❌ 오류: ${json.error}`);
@@ -481,8 +481,8 @@ export default function AdminPage() {
       p_game_id: gameId,
       p_winner: winner,
     });
-    if (error) { showToast("❌ 채점 오류: " + error.message); }
-    else { showToast("✅ 채점 완료"); setRegradeGameId(null); loadAllGames(); }
+    if (error) { showToast("❌ 정산 오류: " + error.message); }
+    else { showToast("✅ 정산 완료"); setRegradeGameId(null); loadAllGames(); }
   };
 
   const resetAndRegrade = async (gameId: number, winner: "home" | "away") => {
@@ -515,7 +515,7 @@ export default function AdminPage() {
       .from("votes")
       .select("voted_team, is_correct, games(home_team, away_team, season_type, winner)")
       .eq("user_id", userId)
-      .not("is_correct", "is", null); // 채점 완료된 것만
+      .not("is_correct", "is", null); // 정산 완료된 것만
 
     if (error) {
       showToast("❌ 데이터 로드 실패: " + error.message);
@@ -623,11 +623,11 @@ export default function AdminPage() {
     };
   }, [tab, gameTabGoNext, gameTabGoPrev]);
 
-  // 경기탭 내부 페이지 (0: 자동등록+채점대기, 1: 경기추가+채점완료)
+  // 경기탭 내부 페이지 (0: 자동등록+정산대기, 1: 경기추가+정산완료)
   const [gameTabPage, setGameTabPage] = useState(0);
   const gameTabTotalPages = 2;
 
-  // 미채점 경기 (채점 대기 중) - 별도 로드
+  // 미정산 경기 (정산 대기 중) - 별도 로드
   const [pendingGames, setPendingGames] = useState<Game[]>([]);
   const [noWinnerCount, setNoWinnerCount] = useState<number>(0);
   useEffect(() => {
@@ -681,7 +681,7 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* ── 1페이지: 자동등록 + 채점대기 ── */}
+              {/* ── 1페이지: 자동등록 + 정산대기 ── */}
               {gameTabPage === 0 && <>
 
                 {/* ESPN 경기 등록하기 */}
@@ -690,7 +690,7 @@ export default function AdminPage() {
                     ESPN 연동 등록
                   </div>
 
-                  {/* 경기 등록하기 + 자동채점 2열 */}
+                  {/* 경기 등록하기 + 자동정산 2열 */}
                   <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                     <button className="btn-primary" style={{ flex: 1 }}
                       onClick={() => setEspnPickerOpen(true)} disabled={espnLoading}>
@@ -698,7 +698,7 @@ export default function AdminPage() {
                     </button>
                     <button className="btn-primary" style={{ flex: 1, background: "var(--accent2)" }}
                       onClick={gradeGamesAuto} disabled={gradeLoading}>
-                      {gradeLoading ? "채점 중..." : "자동채점"}
+                      {gradeLoading ? "정산 중..." : "자동정산"}
                     </button>
                   </div>
 
@@ -798,7 +798,7 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* 채점 대기 박스 */}
+                {/* 정산 대기 박스 */}
                 <div style={{
                   border: "1px solid var(--border)", borderRadius: 10,
                   background: "var(--surface)", marginBottom: 12,
@@ -808,7 +808,7 @@ export default function AdminPage() {
                     borderBottom: "1px solid var(--border)",
                     display: "flex", alignItems: "center", gap: 6,
                   }}>
-                    <span>채점 대기</span>
+                    <span>정산 대기</span>
                     {pendingGames.length > 0 && (
                       <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>
                         {pendingGames.length}경기
@@ -816,7 +816,7 @@ export default function AdminPage() {
                     )}
                   </div>
                   <div style={{ padding: "8px 0" }}>
-                    {/* 채점 대기 경기 */}
+                    {/* 정산 대기 경기 */}
                     {pendingGames.length > 0 ? (
                       <>
                         {pendingGames.map((game) => {
@@ -881,7 +881,7 @@ export default function AdminPage() {
                       </>
                     ) : (
                       <div style={{ textAlign: "center", padding: "14px 0", fontSize: 13, color: "var(--text-muted)" }}>
-                        채점 대기 경기 없음
+                        정산 대기 경기 없음
                       </div>
                     )}
                   </div>
@@ -889,7 +889,7 @@ export default function AdminPage() {
 
               </>}
 
-              {/* ── 2페이지: 경기추가 + 채점완료 ── */}
+              {/* ── 2페이지: 경기추가 + 정산완료 ── */}
               {gameTabPage === 1 && <>
 
                 {/* 경기 추가 폼 - 접기/펼치기 */}
@@ -987,7 +987,7 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* 채점 완료 경기 - 원본 스타일 헤더 */}
+                {/* 정산 완료 경기 - 원본 스타일 헤더 */}
                 <div
                   onClick={() => setCompletedSectionOpen((v) => !v)}
                   style={{
@@ -997,7 +997,7 @@ export default function AdminPage() {
                     padding: "10px 14px", borderRadius: 10,
                     border: "1px solid var(--border)", background: "var(--surface)",
                   }}>
-                  <span>채점 완료 경기</span>
+                  <span>정산 완료 경기</span>
                   <span style={{ fontSize: 20, color: "var(--text-muted)", lineHeight: 1 }}>
                     {completedSectionOpen ? "−" : "+"}
                   </span>
@@ -1164,7 +1164,7 @@ export default function AdminPage() {
                   {filteredGames.length === 0 ? (
                     <div className="empty-state">
                       <div className="empty-icon" style={{ display: "flex", justifyContent: "center", fontSize: 40 }}><CalendarSvgIcon /></div>
-                      <div className="empty-title">해당 기간 채점된 경기가 없습니다</div>
+                      <div className="empty-title">해당 기간 정산된 경기가 없습니다</div>
                     </div>
                   ) : (
                     <>
@@ -1211,7 +1211,7 @@ export default function AdminPage() {
                               </div>
                             </div>
 
-                            {/* 우: 승선택 / 재채점 + COMPLETE 도장 */}
+                            {/* 우: 승선택 / 재정산 + COMPLETE 도장 */}
                             <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, position: "relative" }}>
                               {/* COMPLETE 도장 - winner 있을 때 */}
                               {game.winner && regradeGameId !== game.id && (
@@ -1225,7 +1225,7 @@ export default function AdminPage() {
                                   COMPLETE
                                 </div>
                               )}
-                              {/* 아랫줄: 승 선택 or 재채점 */}
+                              {/* 아랫줄: 승 선택 or 재정산 */}
                               {regradeGameId !== game.id ? (
                                 <div style={{ display: "flex", gap: 4 }}>
                                   <button
@@ -1262,7 +1262,7 @@ export default function AdminPage() {
                                     </button>
                                   </div>
                                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                                    <span style={{ fontSize: 10, color: "var(--gold)" }}>⚠️ 재채점</span>
+                                    <span style={{ fontSize: 10, color: "var(--gold)" }}>⚠️ 재정산</span>
                                     <button style={{ fontSize: 10, color: "var(--text-muted)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
                                       onClick={() => setRegradeGameId(null)}>취소</button>
                                   </div>
