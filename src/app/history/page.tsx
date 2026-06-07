@@ -159,7 +159,7 @@ export default function HistoryPage() {
     const latestDay = String(new Date(latest.start_time).getDate());
 
     setFilterMonth(latestMonth);
-    setFilterDay(latestDay);
+    setFilterDay(latestDay); // 최신 날짜로 세팅 → 해당 날짜 경기 전체 표시
     setPageIndex(0);
 
     // 월 캐러셀도 해당 월로 이동
@@ -192,38 +192,31 @@ export default function HistoryPage() {
     setCalendarOpen(false);
   };
 
+  // filterMonth + filterDay 통합 — race condition 없이 한 번에 결과 세팅
   useEffect(() => {
+    setPageIndex(0);
     if (!filterMonth) {
       setDaysWithGames([]);
-      setFilterDay(null);
-      setGameResults(seasonFilteredGames);
+      setGameResults([]);
       return;
     }
-    const monthGames = seasonFilteredGames.filter((g) => {
-      return format(new Date(g.start_time), "MM") === filterMonth;
-    });
+    const monthGames = seasonFilteredGames.filter((g) =>
+      format(new Date(g.start_time), "MM") === filterMonth
+    );
     const days = Array.from(
       new Set(monthGames.map((g) => new Date(g.start_time).getDate()))
     ).sort((a, b) => a - b);
     setDaysWithGames(days);
-    // filterDay가 없을 때만 자동으로 최신 날짜 선택
-    setFilterDay((prev) => prev ?? (days.length > 0 ? String(days[days.length - 1]) : null));
-    setGameResults(monthGames);
-  }, [filterMonth, allSeasonGames, seasonTypeFilter]);
 
-  // 날짜 선택 시 필터링
-  useEffect(() => {
-    setPageIndex(0);
-    if (!filterMonth) return;
     if (filterDay === null) {
-      setGameResults(seasonFilteredGames.filter((g) => format(new Date(g.start_time), "MM") === filterMonth));
+      // 일 미선택: 해당 월 전체
+      setGameResults(monthGames);
     } else {
-      setGameResults(seasonFilteredGames.filter((g) => {
-        const d = new Date(g.start_time);
-        return format(d, "MM") === filterMonth && d.getDate() === Number(filterDay);
-      }));
+      const dayNum = Number(filterDay);
+      const dayGames = monthGames.filter((g) => new Date(g.start_time).getDate() === dayNum);
+      setGameResults(dayGames.length > 0 ? dayGames : monthGames);
     }
-  }, [filterDay]);
+  }, [filterMonth, filterDay, allSeasonGames, seasonTypeFilter]);
 
   // ── 월 캐러셀 로직 ──────────────────────────────────
   const ITEM_W = 52;   // 중앙 버튼 너비
@@ -352,8 +345,18 @@ export default function HistoryPage() {
   // 월 버튼 클릭
   const handleMonthClick = (m: string, idx: number) => {
     scrollToIndex(idx);
-    setFilterMonth(filterMonth === m ? null : m);
-    setFilterDay(null);
+    if (filterMonth === m) return; // 같은 월 재클릭 무시
+    // 해당 월의 최신 날짜 자동 선택
+    const monthGames = seasonFilteredGames.filter((g) =>
+      format(new Date(g.start_time), "MM") === m
+    );
+    if (monthGames.length > 0) {
+      const latestDay = String(new Date(monthGames[0].start_time).getDate()); // 내림차순이므로 첫 번째가 최신
+      setFilterDay(latestDay);
+    } else {
+      setFilterDay(null);
+    }
+    setFilterMonth(m);
     setMonthClicked(true);
   };
   // ────────────────────────────────────────────────────
@@ -577,8 +580,8 @@ export default function HistoryPage() {
             onClick={() => setFilterDay(null)}
             style={{
               flexShrink: 0,
-              padding: "4px 10px",
-              borderRadius: 8,
+              width: 36, height: 36,
+              borderRadius: "50%",
               background: filterDay === null ? "var(--accent2)" : "transparent",
               color: filterDay === null ? "#fff" : "var(--text-muted)",
               border: filterDay === null ? "2px solid var(--accent2)" : "2px solid var(--border)",
@@ -617,9 +620,8 @@ export default function HistoryPage() {
                     onClick={() => setFilterDay(String(day))}
                     style={{
                       flexShrink: 0,
-                      padding: "4px 8px",
-                      minWidth: 28,
-                      borderRadius: 8,
+                      width: 36, height: 36,
+                      borderRadius: "50%",
                       background: isSelected ? "var(--accent2)" : "transparent",
                       color: isSelected ? "#fff" : "var(--text)",
                       border: isSelected ? "2px solid var(--accent2)" : "2px solid var(--border)",
