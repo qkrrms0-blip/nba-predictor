@@ -536,7 +536,7 @@ export default function VotingPage() {
                           </span>
                         </div>
                       ) : (
-                        <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--text-muted)", lineHeight: 1.1 }}>
+                        <span style={{ fontFamily: "var(--font-display)", fontSize: 10, color: "var(--text-muted)", lineHeight: 1.1 }}>
                           VS
                         </span>
                       )}
@@ -545,7 +545,7 @@ export default function VotingPage() {
                       ) : game.vote_deadline ? (
                         closed
                           ? <span style={{ fontSize: 10, color: "var(--text-muted)" }}>투표 마감</span>
-                          : <span style={{ fontSize: 10, color: "#ef4444", whiteSpace: "nowrap" }}>
+                          : <span style={{ fontSize: 14, color: "#ef4444", whiteSpace: "nowrap" }}>
                             마감 {format(new Date(game.vote_deadline), "M/d HH:mm")}
                           </span>
                       ) : null}
