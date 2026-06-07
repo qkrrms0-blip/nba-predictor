@@ -687,14 +687,14 @@ export default function AdminPage() {
                 {/* ESPN 경기 등록하기 */}
                 <div className="card" style={{ marginBottom: 12, overflow: "visible" }}>
                   <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>
-                    🏀 경기 자동 등록
+                    ESPN 연동 등록
                   </div>
 
                   {/* 경기 등록하기 + 자동채점 2열 */}
                   <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                     <button className="btn-primary" style={{ flex: 1 }}
                       onClick={() => setEspnPickerOpen(true)} disabled={espnLoading}>
-                      {espnLoading ? "등록 중..." : "경기 등록하기"}
+                      {espnLoading ? "등록 중..." : "등록하기"}
                     </button>
                     <button className="btn-primary" style={{ flex: 1, background: "var(--accent2)" }}
                       onClick={gradeGamesAuto} disabled={gradeLoading}>
@@ -1301,7 +1301,7 @@ export default function AdminPage() {
           {tab === "users" && (
             <>
               <div className="card" style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>📧 멤버 직접 추가</div>
+                <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>멤버 추가</div>
                 <div className="form-group">
                   <label className="form-label">이름 (닉네임)</label>
                   <input type="text" className="text-input" placeholder="홍길동"
@@ -1313,7 +1313,7 @@ export default function AdminPage() {
                     value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
                 </div>
                 <button className="btn-primary" style={{ width: "100%" }} onClick={inviteUser}>
-                  멤버 추가 (바로 승인)
+                  멤버 추가
                 </button>
                 <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
                   * 해당 이메일로 Google 로그인하면 승인 없이 바로 투표 참여 가능합니다.
@@ -1368,10 +1368,8 @@ export default function AdminPage() {
               {deleteUserModal && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
                   <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "24px 20px", width: "100%", maxWidth: 320 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>⚠️ 멤버 삭제</div>
                     <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14 }}>
-                      <strong style={{ color: "var(--text)" }}>{deleteUserModal.name}</strong> 을(를) 삭제합니다.<br />
-                      확인을 위해 <strong style={{ color: "#ef4444" }}>삭제</strong>를 입력하세요.
+                      <strong style={{ color: "var(--text)" }}>{deleteUserModal.name}</strong> 을(를) 제거합니다.<br />
                     </p>
                     <input
                       type="text"
@@ -1389,7 +1387,7 @@ export default function AdminPage() {
                         취소
                       </button>
                       <button
-                        onClick={() => deleteUserInput === "삭제" ? deleteUserConfirmed() : showToast("⚠️ '삭제'를 정확히 입력해주세요.")}
+                        onClick={() => deleteUserInput === "삭제" ? deleteUserConfirmed() : showToast("'삭제'를 정확히 입력해주세요.")}
                         style={{ flex: 1, padding: "8px", borderRadius: 8, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
                         삭제
                       </button>
@@ -1541,9 +1539,9 @@ export default function AdminPage() {
                     background: "var(--surface)", border: "1px solid var(--border)",
                     borderRadius: 14, padding: "24px 20px", width: "100%", maxWidth: 320,
                   }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>⚠️ 시즌 종료</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>시즌 종료</div>
                     <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14 }}>
-                      확인을 위해 <strong style={{ color: "#ef4444" }}>시즌종료</strong>를 입력하세요.
+                      확인을 위해 <strong style={{ color: "#ef4444" }}>아래 문구</strong>를 입력하세요.
                     </p>
                     <input
                       type="text"
@@ -1566,7 +1564,7 @@ export default function AdminPage() {
                             endSeason(endSeasonModal);
                             setEndSeasonModal(null);
                           } else {
-                            showToast("⚠️ '시즌종료'를 정확히 입력해주세요.");
+                            showToast("'시즌종료'를 정확히 입력해주세요.");
                           }
                         }}
                         style={{ flex: 1, padding: "8px", borderRadius: 8, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
