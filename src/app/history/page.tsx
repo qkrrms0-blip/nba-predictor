@@ -372,8 +372,8 @@ export default function HistoryPage() {
   const handleMonthClick = (m: string, idx: number) => {
     scrollToIndex(idx);
     if (filterMonth === m) {
-      // 같은 월 재클릭: 일 캐러셀만 열기
-      setMonthClicked(true);
+      // 같은 월 재클릭: 일 캐러셀 열림/닫힘 토글
+      setMonthClicked((prev) => !prev);
       return;
     }
     // 해당 월 최신 날짜 자동 선택
@@ -522,11 +522,15 @@ export default function HistoryPage() {
             position: "fixed",
             top: (() => {
               const btn = calendarBtnRef.current;
-              if (!btn) return 60;
+              if (!btn) return 64;
               const rect = btn.getBoundingClientRect();
-              return rect.bottom + 6;
+              return Math.max(rect.bottom + 6, 64);
             })(),
-            right: 12,
+            right: (() => {
+              const btn = calendarBtnRef.current;
+              if (!btn) return 12;
+              return window.innerWidth - btn.getBoundingClientRect().right;
+            })(),
             zIndex: 100,
             background: "var(--surface)", border: "1px solid var(--border)",
             borderRadius: "var(--radius)", padding: "12px",
