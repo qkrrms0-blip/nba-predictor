@@ -109,11 +109,12 @@ export default function AppShell({ user, children }: Props) {
       .from("push_subscriptions")
       .select("no_weekend, random_auto_vote")
       .eq("user_id", user.id)
-      .maybeSingle()
+      .limit(1)
       .then(({ data }) => {
-        if (data) {
-          setWeekendOn(!data.no_weekend);
-          setRandomAutoVote(data.random_auto_vote ?? false);
+        const row = data?.[0];
+        if (row) {
+          setWeekendOn(!row.no_weekend);
+          setRandomAutoVote(row.random_auto_vote ?? false);
         }
       });
   }, []);
@@ -150,34 +151,43 @@ export default function AppShell({ user, children }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, [popupOpen]);
 
+  // 중복 구독 방지 플래그
+  const subscribingRef = useRef(false);
+
   // 알림 ON (구독 등록)
   const subscribe = async () => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-    const permission = await Notification.requestPermission();
-    setNotifPermission(permission);
-    if (permission !== "granted") return;
+    if (subscribingRef.current) return;
+    subscribingRef.current = true;
+    try {
+      if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+      const permission = await Notification.requestPermission();
+      setNotifPermission(permission);
+      if (permission !== "granted") return;
 
-    const reg = await navigator.serviceWorker.ready;
-    const existing = await reg.pushManager.getSubscription();
-    if (existing) { setIsSubscribed(true); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) { setIsSubscribed(true); return; }
 
-    const subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
-    });
+      const subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
+      });
 
-    const { endpoint, keys } = subscription.toJSON() as {
-      endpoint: string;
-      keys: { p256dh: string; auth: string };
-    };
+      const { endpoint, keys } = subscription.toJSON() as {
+        endpoint: string;
+        keys: { p256dh: string; auth: string };
+      };
 
-    await fetch("/api/push/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint, p256dh: keys.p256dh, auth: keys.auth }),
-    });
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint, p256dh: keys.p256dh, auth: keys.auth }),
+      });
 
-    setIsSubscribed(true);
+      setIsSubscribed(true);
+    } finally {
+      subscribingRef.current = false;
+    }
   };
 
   // 알림 OFF (구독 해제)
