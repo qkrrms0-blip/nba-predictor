@@ -681,37 +681,29 @@ export default function VotingPage() {
                 maxHeight: "80vh", overflowY: "auto",
               }}
             >
-              {/* 헤더: 팀명 + 퍼센트 */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>
-                  {g.home_team} {hPct}%
-                </span>
-                <span style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
-                  총 {totalV}표
-                </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", textAlign: "right" }}>
-                  {aPct}% {g.away_team}
-                </span>
-              </div>
-              {/* 구분선 */}
-              <div style={{ borderTop: "1px solid var(--border)", marginBottom: 8 }} />
               {/* 투표자 명단 2열 */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1px" }}>
-                <div style={{ borderRight: "1px solid var(--border)", paddingRight: 8 }}>
+                {/* 홈팀 */}
+                <div style={{ borderRight: "1px solid var(--border)", paddingRight: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 2 }}>{g.home_team}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 8 }}>{hPct}%</div>
                   {homeList.length === 0
-                    ? <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "4px 0" }}>없음</div>
+                    ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
                     : homeList.map((name, i) => (
-                      <div key={i} style={{ fontSize: 12, color: "var(--text)", padding: "3px 0", borderBottom: i < homeList.length - 1 ? "1px solid var(--border)" : "none" }}>
+                      <div key={i} style={{ fontSize: 12, color: "var(--text)", padding: "3px 0", textAlign: "center", borderBottom: i < homeList.length - 1 ? "1px solid var(--border)" : "none", width: "100%" }}>
                         {name}
                       </div>
                     ))
                   }
                 </div>
-                <div style={{ paddingLeft: 8 }}>
+                {/* 원정팀 */}
+                <div style={{ paddingLeft: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 2 }}>{g.away_team}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 8 }}>{aPct}%</div>
                   {awayList.length === 0
-                    ? <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "4px 0" }}>없음</div>
+                    ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
                     : awayList.map((name, i) => (
-                      <div key={i} style={{ fontSize: 12, color: "var(--text)", padding: "3px 0", borderBottom: i < awayList.length - 1 ? "1px solid var(--border)" : "none" }}>
+                      <div key={i} style={{ fontSize: 12, color: "var(--text)", padding: "3px 0", textAlign: "center", borderBottom: i < awayList.length - 1 ? "1px solid var(--border)" : "none", width: "100%" }}>
                         {name}
                       </div>
                     ))
