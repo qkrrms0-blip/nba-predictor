@@ -29,10 +29,3 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
-
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-  event.respondWith(
-    fetch(event.request).catch(() => new Response("", { status: 503 }))
-  );
-});
