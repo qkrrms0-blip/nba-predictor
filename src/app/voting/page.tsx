@@ -685,28 +685,46 @@ export default function VotingPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1px" }}>
                 {/* 홈팀 */}
                 <div style={{ borderRight: "1px solid var(--border)", paddingRight: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 2 }}>{g.home_team}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 8 }}>{hPct}%</div>
+                  <img src={getTeamLogoUrl(g.home_team)} alt={g.home_team}
+                    style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 2 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>{hPct}%</div>
                   {homeList.length === 0
                     ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
-                    : homeList.map((name, i) => (
-                      <div key={i} style={{ fontSize: 12, color: "var(--text)", padding: "3px 0", textAlign: "center", borderBottom: i < homeList.length - 1 ? "1px solid var(--border)" : "none", width: "100%" }}>
-                        {name}
+                    : <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 4 }}>
+                        {homeList.map((name, i) => (
+                          <span key={i} style={{
+                            fontSize: 11, color: "var(--text)",
+                            border: "1px solid var(--border)", borderRadius: 999,
+                            padding: "2px 8px", whiteSpace: "nowrap",
+                          }}>
+                            {name}
+                          </span>
+                        ))}
                       </div>
-                    ))
                   }
                 </div>
                 {/* 원정팀 */}
                 <div style={{ paddingLeft: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 2 }}>{g.away_team}</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", marginBottom: 8 }}>{aPct}%</div>
+                  <img src={getTeamLogoUrl(g.away_team)} alt={g.away_team}
+                    style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 2 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+                  />
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>{aPct}%</div>
                   {awayList.length === 0
                     ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
-                    : awayList.map((name, i) => (
-                      <div key={i} style={{ fontSize: 12, color: "var(--text)", padding: "3px 0", textAlign: "center", borderBottom: i < awayList.length - 1 ? "1px solid var(--border)" : "none", width: "100%" }}>
-                        {name}
+                    : <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 4 }}>
+                        {awayList.map((name, i) => (
+                          <span key={i} style={{
+                            fontSize: 11, color: "var(--text)",
+                            border: "1px solid var(--border)", borderRadius: 999,
+                            padding: "2px 8px", whiteSpace: "nowrap",
+                          }}>
+                            {name}
+                          </span>
+                        ))}
                       </div>
-                    ))
                   }
                 </div>
               </div>
