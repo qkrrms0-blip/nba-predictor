@@ -205,8 +205,6 @@ export default function AppShell({ user, children }: Props) {
     }
     setIsSubscribed(false);
     setWeekendOn(false);
-    setRandomAutoVote(false);
-    setOddsAutoVote(false);
   };
 
   // 주말 알림 토글 → DB 저장
