@@ -689,15 +689,20 @@ export default function VotingPage() {
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 2 }}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
                   />
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>{hPct}%</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: g.myVote?.voted_team === "home" ? "#3b82f6" : "var(--text-muted)", marginBottom: 8 }}>{hPct}%</div>
                   {homeList.length === 0
                     ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
-                    : <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 4 }}>
+                    : <div style={{
+                        display: "grid",
+                        gridTemplateColumns: homeList.length >= 8 ? "1fr 1fr" : "1fr",
+                        gap: 4, width: "100%",
+                      }}>
                         {homeList.map((name, i) => (
                           <span key={i} style={{
                             fontSize: 11, color: "var(--text)",
                             border: "1px solid var(--border)", borderRadius: 999,
                             padding: "2px 8px", whiteSpace: "nowrap",
+                            textAlign: "center",
                           }}>
                             {name}
                           </span>
@@ -711,15 +716,20 @@ export default function VotingPage() {
                     style={{ width: 36, height: 36, objectFit: "contain", marginBottom: 2 }}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
                   />
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>{aPct}%</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: g.myVote?.voted_team === "away" ? "#3b82f6" : "var(--text-muted)", marginBottom: 8 }}>{aPct}%</div>
                   {awayList.length === 0
                     ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
-                    : <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 4 }}>
+                    : <div style={{
+                        display: "grid",
+                        gridTemplateColumns: awayList.length >= 8 ? "1fr 1fr" : "1fr",
+                        gap: 4, width: "100%",
+                      }}>
                         {awayList.map((name, i) => (
                           <span key={i} style={{
                             fontSize: 11, color: "var(--text)",
                             border: "1px solid var(--border)", borderRadius: 999,
                             padding: "2px 8px", whiteSpace: "nowrap",
+                            textAlign: "center",
                           }}>
                             {name}
                           </span>
