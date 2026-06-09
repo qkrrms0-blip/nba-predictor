@@ -6,7 +6,6 @@ import PushInit from "@/components/PushInit";
 export const metadata: Metadata = {
   title: "원샷 NBA",
   description: "NBA 승부예측 앱",
-  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
