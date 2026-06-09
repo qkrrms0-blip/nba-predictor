@@ -31,8 +31,6 @@ interface GameWithVotes extends Game {
   totalVotes?: number;
   correctVoters?: { name: string; points: number }[];
   correctCount?: number;
-  homeVoters?: string[];
-  awayVoters?: string[];
 }
 
 interface TopRanker {
@@ -50,7 +48,6 @@ export default function VotingPage() {
   const [topRankers, setTopRankers] = useState<TopRanker[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
   const [expandedGame, setExpandedGame] = useState<number | null>(null);
-  const [voterPopupGame, setVoterPopupGame] = useState<number | null>(null);
 
   const GAMES_PER_PAGE = 5;
 
@@ -225,8 +222,6 @@ export default function VotingPage() {
 
     let voteStats: Record<number, { home: number; away: number }> = {};
     let correctVotersMap: Record<number, { name: string; points: number }[]> = {};
-    let homeVotersMap: Record<number, string[]> = {};
-    let awayVotersMap: Record<number, string[]> = {};
 
     if (closedIds.length > 0) {
       const { data: allVotes } = await supabase.from("votes")
@@ -244,13 +239,6 @@ export default function VotingPage() {
           if (!correctVotersMap[v.game_id]) correctVotersMap[v.game_id] = [];
           correctVotersMap[v.game_id].push({ name: userMap[v.user_id] || "알 수 없음", points: v.points || 0 });
         }
-        if (v.voted_team === "home") {
-          if (!homeVotersMap[v.game_id]) homeVotersMap[v.game_id] = [];
-          homeVotersMap[v.game_id].push(userMap[v.user_id] || "알 수 없음");
-        } else {
-          if (!awayVotersMap[v.game_id]) awayVotersMap[v.game_id] = [];
-          awayVotersMap[v.game_id].push(userMap[v.user_id] || "알 수 없음");
-        }
       });
     }
 
@@ -265,8 +253,6 @@ export default function VotingPage() {
         totalVotes: (stats?.home || 0) + (stats?.away || 0),
         correctVoters,
         correctCount: correctVoters.length,
-        homeVoters: homeVotersMap[game.id] || [],
-        awayVoters: awayVotersMap[game.id] || [],
       };
     });
 
@@ -601,24 +587,12 @@ export default function VotingPage() {
 
                   {/* 마감 후 또는 정산된 경기: 퍼센트 바 */}
                   {(closed || game.winner) && totalVotes > 0 && (
-                    <div
-                      className="vote-stats"
-                      style={{
-                        marginTop: 8,
-                        cursor: closed && !game.winner && !isRegular ? "pointer" : "default",
-                      }}
-                      onClick={() => {
-                        if (closed && !game.winner && !isRegular) setVoterPopupGame(game.id);
-                      }}
-                    >
+                    <div className="vote-stats" style={{ marginTop: 8 }}>
                       <span className="vote-pct">{homePct}%</span>
                       <div className="vote-bar">
                         <div className="vote-bar-fill" style={{ width: `${homePct}%` }} />
                       </div>
                       <span className="vote-pct">{awayPct}%</span>
-                      {closed && !game.winner && !isRegular && (
-                        <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 4 }}>👥</span>
-                      )}
                     </div>
                   )}
 
@@ -653,81 +627,6 @@ export default function VotingPage() {
               );
             })}
           </>
-        );
-      })()}
-      {voterPopupGame !== null && (() => {
-        const g = games.find(x => x.id === voterPopupGame);
-        if (!g) return null;
-        const totalV = g.totalVotes || 0;
-        const hPct = totalV > 0 ? Math.round((g.homeVotes || 0) / totalV * 100) : 50;
-        const aPct = 100 - hPct;
-        const homeList = g.homeVoters || [];
-        const awayList = g.awayVoters || [];
-        const maxRows = Math.max(homeList.length, awayList.length);
-        return (
-          <div
-            onClick={() => setVoterPopupGame(null)}
-            style={{
-              position: "fixed", inset: 0, zIndex: 1000,
-              background: "rgba(0,0,0,0.6)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{
-                background: "var(--surface)", border: "1px solid var(--border)",
-                borderRadius: 16, padding: "16px", width: "90%", maxWidth: 360,
-                maxHeight: "80vh", overflowY: "auto",
-              }}
-            >
-              {/* 헤더: 팀명 + 퍼센트 */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>
-                  {g.home_team} {hPct}%
-                </span>
-                <span style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
-                  총 {totalV}표
-                </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", textAlign: "right" }}>
-                  {aPct}% {g.away_team}
-                </span>
-              </div>
-              {/* 구분선 */}
-              <div style={{ borderTop: "1px solid var(--border)", marginBottom: 8 }} />
-              {/* 투표자 명단 2열 */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1px" }}>
-                <div style={{ borderRight: "1px solid var(--border)", paddingRight: 8 }}>
-                  {homeList.length === 0
-                    ? <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "4px 0" }}>없음</div>
-                    : homeList.map((name, i) => (
-                      <div key={i} style={{ fontSize: 12, color: "var(--text)", padding: "3px 0", borderBottom: i < homeList.length - 1 ? "1px solid var(--border)" : "none" }}>
-                        {name}
-                      </div>
-                    ))
-                  }
-                </div>
-                <div style={{ paddingLeft: 8 }}>
-                  {awayList.length === 0
-                    ? <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "4px 0" }}>없음</div>
-                    : awayList.map((name, i) => (
-                      <div key={i} style={{ fontSize: 12, color: "var(--text)", padding: "3px 0", borderBottom: i < awayList.length - 1 ? "1px solid var(--border)" : "none" }}>
-                        {name}
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-              <div style={{ textAlign: "center", marginTop: 14 }}>
-                <button
-                  onClick={() => setVoterPopupGame(null)}
-                  style={{ fontSize: 12, color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}
-                >
-                  닫기
-                </button>
-              </div>
-            </div>
-          </div>
         );
       })()}
       {toast && <div className="toast">{toast}</div>}
