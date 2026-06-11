@@ -610,7 +610,7 @@ export default function VotingPage() {
                         cursor: !isRegular ? "pointer" : "default",
                       }}
                       onClick={() => {
-                        if (!isRegular) setVoterPopupGame(game.id);
+                        if (!isRegular) { setVoterPopupGame(game.id); loadTopRankers(); }
                       }}
                     >
                       <span className="vote-pct">{homePct}%</span>
