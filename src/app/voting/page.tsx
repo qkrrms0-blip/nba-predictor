@@ -674,7 +674,7 @@ export default function VotingPage() {
           const myPoints = allRankings[myIdx]?.total_points ?? 0;
           const voterPoints = allRankings[voterIdx]?.total_points ?? 0;
           const pointDiff = Math.abs(myPoints - voterPoints);
-          if (rankDiff <= 1 || pointDiff <= 3) return "#f97316";
+          if (rankDiff <= 1 && pointDiff <= 3) return "#f97316";
           return "#3b82f6";
         };
 
