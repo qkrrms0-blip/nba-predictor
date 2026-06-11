@@ -670,7 +670,7 @@ export default function VotingPage() {
           const voterIdx = allRankings.findIndex(r => r.id.trim() === voterUserId.trim());
           const myIdx = allRankings.findIndex(r => r.id.trim() === userId.trim());
           if (voterIdx === -1 || myIdx === -1) return "var(--text)";
-          return voterIdx < myIdx ? "#ef4444" : "#3b82f6";
+          return voterIdx < myIdx ? "#f97316" : "#3b82f6";
         };
 
         const renderList = (list: { name: string; userId: string }[]) => {
