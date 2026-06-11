@@ -693,16 +693,16 @@ export default function VotingPage() {
                   {homeList.length === 0
                     ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
                     : <div style={{
-                        display: "grid",
-                        gridTemplateColumns: homeList.length >= 8 ? "1fr 1fr" : "1fr",
-                        gap: 4, width: "100%",
+                        display: "flex", flexWrap: "wrap", justifyContent: "center",
+                        gap: 4,
                       }}>
                         {homeList.map((name, i) => (
                           <span key={i} style={{
                             fontSize: 11, color: "var(--text)",
                             border: "1px solid var(--border)", borderRadius: 999,
                             padding: "2px 8px", whiteSpace: "nowrap",
-                            textAlign: "center",
+                            width: homeList.length >= 8 ? "calc(50% - 2px)" : "auto",
+                            textAlign: "center", boxSizing: "border-box",
                           }}>
                             {name}
                           </span>
@@ -720,16 +720,16 @@ export default function VotingPage() {
                   {awayList.length === 0
                     ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
                     : <div style={{
-                        display: "grid",
-                        gridTemplateColumns: awayList.length >= 8 ? "1fr 1fr" : "1fr",
-                        gap: 4, width: "100%",
+                        display: "flex", flexWrap: "wrap", justifyContent: "center",
+                        gap: 4,
                       }}>
                         {awayList.map((name, i) => (
                           <span key={i} style={{
                             fontSize: 11, color: "var(--text)",
                             border: "1px solid var(--border)", borderRadius: 999,
                             padding: "2px 8px", whiteSpace: "nowrap",
-                            textAlign: "center",
+                            width: awayList.length >= 8 ? "calc(50% - 2px)" : "auto",
+                            textAlign: "center", boxSizing: "border-box",
                           }}>
                             {name}
                           </span>
