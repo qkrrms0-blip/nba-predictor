@@ -669,8 +669,13 @@ export default function VotingPage() {
           if (voterUserId.trim() === userId.trim()) return "#ffffff";
           const voterIdx = allRankings.findIndex(r => r.id.trim() === voterUserId.trim());
           const myIdx = allRankings.findIndex(r => r.id.trim() === userId.trim());
-          if (voterIdx === -1 || myIdx === -1) return "var(--text)";
-          return voterIdx < myIdx ? "#f97316" : "#3b82f6";
+          if (voterIdx === -1 || myIdx === -1) return "#3b82f6";
+          const rankDiff = Math.abs(voterIdx - myIdx);
+          const myPoints = allRankings[myIdx]?.total_points ?? 0;
+          const voterPoints = allRankings[voterIdx]?.total_points ?? 0;
+          const pointDiff = Math.abs(myPoints - voterPoints);
+          if (rankDiff <= 1 || pointDiff <= 3) return "#f97316";
+          return "#3b82f6";
         };
 
         const renderList = (list: { name: string; userId: string }[]) => {
