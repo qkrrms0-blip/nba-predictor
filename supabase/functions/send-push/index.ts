@@ -159,6 +159,7 @@ async function sendWebPush(subscription: {
       "Content-Type": "application/octet-stream",
       "Content-Encoding": "aes128gcm",
       "TTL": "86400",
+      "Urgency": "high" //26.06.11 추가//
     },
     body,
   });

@@ -31,8 +31,8 @@ interface GameWithVotes extends Game {
   totalVotes?: number;
   correctVoters?: { name: string; points: number }[];
   correctCount?: number;
-  homeVoters?: string[];
-  awayVoters?: string[];
+  homeVoters?: { name: string; userId: string }[];
+  awayVoters?: { name: string; userId: string }[];
 }
 
 interface TopRanker {
@@ -48,6 +48,7 @@ export default function VotingPage() {
   const [userId, setUserId] = useState<string>("");
   const [toast, setToast] = useState("");
   const [topRankers, setTopRankers] = useState<TopRanker[]>([]);
+  const [allRankings, setAllRankings] = useState<RankingEntry[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
   const [expandedGame, setExpandedGame] = useState<number | null>(null);
   const [voterPopupGame, setVoterPopupGame] = useState<number | null>(null);
@@ -172,6 +173,7 @@ export default function VotingPage() {
       i += sameScore.length;
     }
     setTopRankers(groups);
+    setAllRankings(sorted);
   }, []);
 
   const loadGames = useCallback(async (offset: number) => {
@@ -225,8 +227,8 @@ export default function VotingPage() {
 
     let voteStats: Record<number, { home: number; away: number }> = {};
     let correctVotersMap: Record<number, { name: string; points: number }[]> = {};
-    let homeVotersMap: Record<number, string[]> = {};
-    let awayVotersMap: Record<number, string[]> = {};
+    let homeVotersMap: Record<number, { name: string; userId: string }[]> = {};
+    let awayVotersMap: Record<number, { name: string; userId: string }[]> = {};
 
     if (closedIds.length > 0) {
       const { data: allVotes } = await supabase.from("votes")
@@ -246,10 +248,10 @@ export default function VotingPage() {
         }
         if (v.voted_team === "home") {
           if (!homeVotersMap[v.game_id]) homeVotersMap[v.game_id] = [];
-          homeVotersMap[v.game_id].push(userMap[v.user_id] || "알 수 없음");
+          homeVotersMap[v.game_id].push({ name: userMap[v.user_id] || "알 수 없음", userId: v.user_id });
         } else {
           if (!awayVotersMap[v.game_id]) awayVotersMap[v.game_id] = [];
-          awayVotersMap[v.game_id].push(userMap[v.user_id] || "알 수 없음");
+          awayVotersMap[v.game_id].push({ name: userMap[v.user_id] || "알 수 없음", userId: v.user_id });
         }
       });
     }
@@ -605,10 +607,10 @@ export default function VotingPage() {
                       className="vote-stats"
                       style={{
                         marginTop: 8,
-                        cursor: closed && !game.winner && !isRegular ? "pointer" : "default",
+                        cursor: !isRegular ? "pointer" : "default",
                       }}
                       onClick={() => {
-                        if (closed && !game.winner && !isRegular) setVoterPopupGame(game.id);
+                        if (!isRegular) setVoterPopupGame(game.id);
                       }}
                     >
                       <span className="vote-pct">{homePct}%</span>
@@ -616,9 +618,6 @@ export default function VotingPage() {
                         <div className="vote-bar-fill" style={{ width: `${homePct}%` }} />
                       </div>
                       <span className="vote-pct">{awayPct}%</span>
-                      {closed && !game.winner && !isRegular && (
-                        <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 4 }}>👥</span>
-                      )}
                     </div>
                   )}
 
@@ -663,7 +662,37 @@ export default function VotingPage() {
         const aPct = 100 - hPct;
         const homeList = g.homeVoters || [];
         const awayList = g.awayVoters || [];
-        const maxRows = Math.max(homeList.length, awayList.length);
+
+        // 내 랭킹 인덱스
+        const myRankIdx = allRankings.findIndex(r => r.id === userId);
+
+        const getVoterColor = (voterUserId: string) => {
+          if (voterUserId === userId) return "var(--accent2)";
+          const voterIdx = allRankings.findIndex(r => r.id === voterUserId);
+          if (voterIdx === -1 || myRankIdx === -1) return "var(--text)";
+          return voterIdx < myRankIdx ? "#ef4444" : "#3b82f6";
+        };
+
+        const renderList = (list: { name: string; userId: string }[]) => {
+          if (list.length === 0) return <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>;
+          return (
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 4 }}>
+              {list.map((v, i) => (
+                <span key={i} style={{
+                  fontSize: 11,
+                  color: getVoterColor(v.userId),
+                  border: `1px solid ${getVoterColor(v.userId)}`,
+                  borderRadius: 999,
+                  padding: "2px 8px", whiteSpace: "nowrap",
+                  width: list.length >= 8 ? "calc(50% - 2px)" : "auto",
+                  textAlign: "center", boxSizing: "border-box",
+                }}>
+                  {v.name}
+                </span>
+              ))}
+            </div>
+          );
+        };
         return (
           <div
             onClick={() => setVoterPopupGame(null)}
@@ -690,25 +719,7 @@ export default function VotingPage() {
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
                   />
                   <div style={{ fontSize: 12, fontWeight: 700, color: g.myVote?.voted_team === "home" ? "#3b82f6" : "var(--text-muted)", marginBottom: 8 }}>{hPct}%</div>
-                  {homeList.length === 0
-                    ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
-                    : <div style={{
-                        display: "flex", flexWrap: "wrap", justifyContent: "center",
-                        gap: 4,
-                      }}>
-                        {homeList.map((name, i) => (
-                          <span key={i} style={{
-                            fontSize: 11, color: "var(--text)",
-                            border: "1px solid var(--border)", borderRadius: 999,
-                            padding: "2px 8px", whiteSpace: "nowrap",
-                            width: homeList.length >= 8 ? "calc(50% - 2px)" : "auto",
-                            textAlign: "center", boxSizing: "border-box",
-                          }}>
-                            {name}
-                          </span>
-                        ))}
-                      </div>
-                  }
+                  {renderList(homeList)}
                 </div>
                 {/* 원정팀 */}
                 <div style={{ paddingLeft: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -717,25 +728,7 @@ export default function VotingPage() {
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
                   />
                   <div style={{ fontSize: 12, fontWeight: 700, color: g.myVote?.voted_team === "away" ? "#3b82f6" : "var(--text-muted)", marginBottom: 8 }}>{aPct}%</div>
-                  {awayList.length === 0
-                    ? <div style={{ fontSize: 11, color: "var(--text-muted)" }}>없음</div>
-                    : <div style={{
-                        display: "flex", flexWrap: "wrap", justifyContent: "center",
-                        gap: 4,
-                      }}>
-                        {awayList.map((name, i) => (
-                          <span key={i} style={{
-                            fontSize: 11, color: "var(--text)",
-                            border: "1px solid var(--border)", borderRadius: 999,
-                            padding: "2px 8px", whiteSpace: "nowrap",
-                            width: awayList.length >= 8 ? "calc(50% - 2px)" : "auto",
-                            textAlign: "center", boxSizing: "border-box",
-                          }}>
-                            {name}
-                          </span>
-                        ))}
-                      </div>
-                  }
+                  {renderList(awayList)}
                 </div>
               </div>
               <div style={{ textAlign: "center", marginTop: 14 }}>
