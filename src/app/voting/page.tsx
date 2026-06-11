@@ -663,14 +663,14 @@ export default function VotingPage() {
         const homeList = g.homeVoters || [];
         const awayList = g.awayVoters || [];
 
-        // 내 랭킹 인덱스
-        const myRankIdx = allRankings.findIndex(r => r.id === userId);
+        // 내 랭킹 인덱스 (함수 내에서 직접 계산)
 
         const getVoterColor = (voterUserId: string) => {
-          if (voterUserId === userId) return "var(--accent2)";
-          const voterIdx = allRankings.findIndex(r => r.id === voterUserId);
-          if (voterIdx === -1 || myRankIdx === -1) return "var(--text)";
-          return voterIdx < myRankIdx ? "#ef4444" : "#3b82f6";
+          if (voterUserId.trim() === userId.trim()) return "#ffffff";
+          const voterIdx = allRankings.findIndex(r => r.id.trim() === voterUserId.trim());
+          const myIdx = allRankings.findIndex(r => r.id.trim() === userId.trim());
+          if (voterIdx === -1 || myIdx === -1) return "var(--text)";
+          return voterIdx < myIdx ? "#ef4444" : "#3b82f6";
         };
 
         const renderList = (list: { name: string; userId: string }[]) => {
