@@ -52,6 +52,7 @@ export default function VotingPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [expandedGame, setExpandedGame] = useState<number | null>(null);
   const [voterPopupGame, setVoterPopupGame] = useState<number | null>(null);
+  const [seasonEnded, setSeasonEnded] = useState(false);
 
   const GAMES_PER_PAGE = 5;
 
@@ -131,7 +132,12 @@ export default function VotingPage() {
   const loadTopRankers = useCallback(async () => {
     const { data: seasonData } = await supabase
       .from("seasons").select("id").eq("is_active", true).single();
-    if (!seasonData) return;
+    if (!seasonData) {
+      setSeasonEnded(true);
+      setTopRankers([]);
+      return;
+    }
+    setSeasonEnded(false);
 
     const { data: allUsers } = await supabase
       .from("users").select("id, name, email, bonus_points").eq("approved", true);
@@ -368,6 +374,24 @@ export default function VotingPage() {
 
   return (
     <div style={{ touchAction: "pan-y", userSelect: "none" }}>
+      {/* 시즌 종료 배너 */}
+      {seasonEnded && (
+        <div style={{
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 14, padding: "14px 10px", marginBottom: 6,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+          textAlign: "center",
+        }}>
+          <span style={{ fontSize: 22, lineHeight: 1 }}>🏁</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+            시즌이 종료되었습니다
+          </span>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+            다음 시즌을 기다려주세요!
+          </span>
+        </div>
+      )}
+
       {/* 시즌 랭킹 Top 3 */}
       {topRankers.length > 0 && (
         <div style={{
