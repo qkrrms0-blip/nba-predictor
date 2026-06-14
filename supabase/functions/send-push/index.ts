@@ -159,7 +159,7 @@ async function sendWebPush(subscription: {
       "Content-Type": "application/octet-stream",
       "Content-Encoding": "aes128gcm",
       "TTL": "86400",
-      "Urgency": "high" //26.06.11 추가//
+      "Urgency": "high",
     },
     body,
   });
@@ -252,6 +252,7 @@ Deno.serve(async () => {
       });
 
       const ok = await sendWebPush(sub, notifPayload);
+      console.log(`[push] user_id: ${sub.user_id} | endpoint: ${new URL(sub.endpoint).host} | unvoted: ${unvotedCount}`);
       if (ok) sent++;
     }
 

@@ -92,10 +92,11 @@ export default function HistoryPage() {
 
       const { data: seasonData } = await supabase
         .from("seasons").select("*").order("id", { ascending: false });
-      if (seasonData) {
+      if (seasonData && seasonData.length > 0) {
         setSeasons(seasonData);
         const active = seasonData.find((s: Season) => s.is_active);
-        if (active) setSelectedSeason(active.id);
+        // 활성 시즌이 없으면(시즌 종료 상태) 가장 최근 시즌을 기본 선택
+        setSelectedSeason(active ? active.id : seasonData[0].id);
       }
     };
     init();
