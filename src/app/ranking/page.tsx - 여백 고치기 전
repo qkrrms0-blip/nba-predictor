@@ -153,8 +153,6 @@ export default function RankingPage() {
             gridTemplateColumns: "1fr 1fr",
             gap: "6px",
             padding: "0 2px",
-            maxWidth: 480,
-            margin: "0 auto",
           }}
         >
           {leftCol.map((entry, colIdx) => {
@@ -174,21 +172,21 @@ export default function RankingPage() {
                   className="rank-card"
                   style={{
                     ...(entry.id === myId ? { borderColor: "var(--accent2)" } : {}),
-                    padding: "6px 4px",
+                    padding: "8px 6px",
                     minWidth: 0,
                   }}
                 >
-                  <div className={`rank-num ${getRankClass(rank)}`} style={{ minWidth: 20, fontSize: 14 }}>
+                  <div className={`rank-num ${getRankClass(rank)}`} style={{ minWidth: 28, fontSize: 15 }}>
                     {getRankDisplay(rank)}
                   </div>
                   <div className="rank-info" style={{ minWidth: 0, flex: 1 }}>
-                    <div className="rank-name" style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <div className="rank-name" style={{ fontSize: 13 }}>
                       {entry.name}
                       {entry.id === myId && (
                         <span style={{ fontSize: 10, color: "var(--accent2)", marginLeft: 4 }}>나</span>
                       )}
                     </div>
-                    <div className="rank-sub" style={{ fontSize: 10, whiteSpace: "nowrap" }}>
+                    <div className="rank-sub" style={{ fontSize: 10 }}>
                       {entry.correct_votes}/{entry.total_votes} · {entry.accuracy_pct}%
                     </div>
                   </div>
@@ -201,21 +199,21 @@ export default function RankingPage() {
                     className="rank-card"
                     style={{
                       ...(rightEntry.id === myId ? { borderColor: "var(--accent2)" } : {}),
-                      padding: "6px 4px",
+                      padding: "8px 6px",
                       minWidth: 0,
                     }}
                   >
-                    <div className={`rank-num ${getRankClass(rightRank!)}`} style={{ minWidth: 20, fontSize: 14 }}>
+                    <div className={`rank-num ${getRankClass(rightRank!)}`} style={{ minWidth: 28, fontSize: 15 }}>
                       {getRankDisplay(rightRank!)}
                     </div>
                     <div className="rank-info" style={{ minWidth: 0, flex: 1 }}>
-                      <div className="rank-name" style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div className="rank-name" style={{ fontSize: 13 }}>
                         {rightEntry.name}
                         {rightEntry.id === myId && (
                           <span style={{ fontSize: 10, color: "var(--accent2)", marginLeft: 4 }}>나</span>
                         )}
                       </div>
-                      <div className="rank-sub" style={{ fontSize: 10, whiteSpace: "nowrap" }}>
+                      <div className="rank-sub" style={{ fontSize: 10 }}>
                         {rightEntry.correct_votes}/{rightEntry.total_votes} · {rightEntry.accuracy_pct}%
                       </div>
                     </div>
