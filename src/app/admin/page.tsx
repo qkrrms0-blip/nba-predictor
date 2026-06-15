@@ -566,7 +566,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (statsModal) loadUserStats(statsModal.id, statsSeasonType, statsSeasonId ?? undefined);
-  }, [statsModal, statsSeasonType, statsSeasonId, loadUserStats]);
+  }, [statsSeasonType]);
 
   const loadSeasonRanking = useCallback(async (seasonId: number) => {
     setSeasonRankingLoading(true);
@@ -1365,7 +1365,12 @@ export default function AdminPage() {
                   <div style={{ flex: 1 }}>
                     <div
                       style={{ fontWeight: 600, fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
-                      onClick={() => { setStatsModal({ id: user.id, name: user.name }); setStatsSeasonType("post"); }}
+                      onClick={() => {
+                        setStatsSeasonId(null);
+                        setStatsSeasonType("post");
+                        setStatsModal({ id: user.id, name: user.name });
+                        loadUserStats(user.id, "post", undefined);
+                      }}
                     >
                       {user.name}
                       <span style={{ fontSize: 10, color: "var(--accent)", opacity: 0.7 }}>▸</span>
@@ -1603,8 +1608,9 @@ export default function AdminPage() {
                           <div key={entry.id}
                             onClick={() => {
                               setStatsSeasonId(seasonRankingModal.id);
-                              setStatsModal({ id: entry.id, name: entry.name });
                               setStatsSeasonType("post");
+                              setStatsModal({ id: entry.id, name: entry.name });
+                              loadUserStats(entry.id, "post", seasonRankingModal.id);
                             }}
                             style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
                             <span style={{ minWidth: 24, fontSize: 14, textAlign: "center" }}>{rankIcon}</span>
