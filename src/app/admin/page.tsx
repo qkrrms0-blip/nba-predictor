@@ -1440,112 +1440,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* 유저 팀별 적중률 모달 */}
-              {statsModal && (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-                  onClick={() => setStatsModal(null)}>
-                  <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 16px", width: "100%", maxWidth: 360, maxHeight: "80vh", overflowY: "auto" }}
-                    onClick={(e) => e.stopPropagation()}>
-
-                    {/* 헤더 */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {statsSeasonId !== null && (
-                          <button onClick={() => { setStatsModal(null); }}
-                            style={{ background: "transparent", border: "none", fontSize: 18, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>←</button>
-                        )}
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>{statsModal.name}의 팀별 적중률</div>
-                      </div>
-                      <button onClick={() => { setStatsModal(null); setStatsSeasonId(null); }}
-                        style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
-                    </div>
-
-                    {/* 정규 / 포스트 탭 */}
-                    <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", marginBottom: 16 }}>
-                      {(["post", "regular"] as const).map((type) => (
-                        <button key={type}
-                          onClick={() => setStatsSeasonType(type)}
-                          style={{
-                            flex: 1, padding: "7px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none",
-                            background: statsSeasonType === type ? "var(--accent)" : "var(--surface2)",
-                            color: statsSeasonType === type ? "#fff" : "var(--text-muted)"
-                          }}>
-                          {type === "regular" ? "정규" : "POST"}
-                        </button>
-                      ))}
-                    </div>
-
-                    {statsLoading ? (
-                      <div className="loading-spinner"><div className="spinner" /></div>
-                    ) : statsData.length === 0 ? (
-                      <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: 13 }}>
-                        데이터가 없습니다
-                      </div>
-                    ) : (() => {
-                      const top3 = statsData.slice(0, 3);
-                      const bottom3 = [...statsData].slice(-3);
-                      const isRegular = statsSeasonType === "regular";
-
-                      const renderRow = (d: { team: string; total: number; correct: number; pct: number }, i: number, isTop: boolean) => (
-                        <div key={d.team} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", borderBottom: "1px solid var(--border)" }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", width: 16, textAlign: "center", flexShrink: 0 }}>
-                            {i + 1}
-                          </span>
-                          <img src={getTeamLogoUrl(d.team)} alt={d.team}
-                            style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
-                            onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {TEAMS.find(t => t.en === d.team)?.ko || d.team}
-                            </div>
-                            {isRegular && (
-                              <div style={{ fontSize: 11, color: isTop ? "var(--green)" : "#ef4444", fontWeight: 600, marginTop: 1 }}>
-                                {d.pct}%
-                              </div>
-                            )}
-                          </div>
-                          {isRegular ? (
-                            /* 정규: 오른쪽에 맞춘수/투표수 */
-                            <div style={{ flexShrink: 0, textAlign: "right" }}>
-                              <span style={{ fontWeight: 800, fontSize: 15, color: isTop ? "var(--green)" : "#ef4444" }}>
-                                {d.correct}
-                              </span>
-                              <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400 }}>
-                                /{d.total}
-                              </span>
-                            </div>
-                          ) : (
-                            /* 포스트: 오른쪽에 % */
-                            <div style={{ flexShrink: 0, textAlign: "right" }}>
-                              <div style={{ fontWeight: 800, fontSize: 16, color: isTop ? "var(--green)" : "#ef4444" }}>
-                                {d.pct}%
-                              </div>
-                              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{d.correct}/{d.total}</div>
-                            </div>
-                          )}
-                        </div>
-                      );
-
-                      return (
-                        <>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, letterSpacing: "0.05em" }}>
-                            상위 3팀 {isRegular ? "· 맞춘수/투표수 순" : "· 적중률 순"}
-                          </div>
-                          {top3.map((d, i) => renderRow(d, i, true))}
-                          {statsData.length > 3 && (
-                            <>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", margin: "14px 0 6px", letterSpacing: "0.05em" }}>
-                                하위 3팀
-                              </div>
-                              {bottom3.map((d, i) => renderRow(d, statsData.length - bottom3.length + i, false))}
-                            </>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
             </>
           )}
 
@@ -1674,6 +1568,84 @@ export default function AdminPage() {
             </>
           )}
         </>
+      )}
+
+      {/* 유저 팀별 적중률 모달 */}
+      {statsModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={() => { setStatsModal(null); setStatsSeasonId(null); }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 16px", width: "100%", maxWidth: 360, maxHeight: "80vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {statsSeasonId !== null && (
+                  <button onClick={() => { setStatsModal(null); }}
+                    style={{ background: "transparent", border: "none", fontSize: 18, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>←</button>
+                )}
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{statsModal.name}의 팀별 적중률</div>
+              </div>
+              <button onClick={() => { setStatsModal(null); setStatsSeasonId(null); }}
+                style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+            <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", marginBottom: 16 }}>
+              {(["post", "regular"] as const).map((type) => (
+                <button key={type} onClick={() => setStatsSeasonType(type)}
+                  style={{ flex: 1, padding: "7px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none",
+                    background: statsSeasonType === type ? "var(--accent)" : "var(--surface2)",
+                    color: statsSeasonType === type ? "#fff" : "var(--text-muted)" }}>
+                  {type === "regular" ? "정규" : "POST"}
+                </button>
+              ))}
+            </div>
+            {statsLoading ? (
+              <div className="loading-spinner"><div className="spinner" /></div>
+            ) : statsData.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: 13 }}>데이터가 없습니다</div>
+            ) : (() => {
+              const top3 = statsData.slice(0, 3);
+              const bottom3 = [...statsData].slice(-3);
+              const isRegular = statsSeasonType === "regular";
+              const renderRow = (d: { team: string; total: number; correct: number; pct: number }, i: number, isTop: boolean) => (
+                <div key={d.team} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", width: 16, textAlign: "center", flexShrink: 0 }}>{i + 1}</span>
+                  <img src={getTeamLogoUrl(d.team)} alt={d.team} style={{ width: 32, height: 32, objectFit: "contain", flexShrink: 0 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {TEAMS.find(t => t.en === d.team)?.ko || d.team}
+                    </div>
+                    {isRegular && <div style={{ fontSize: 11, color: isTop ? "var(--green)" : "#ef4444", fontWeight: 600, marginTop: 1 }}>{d.pct}%</div>}
+                  </div>
+                  {isRegular ? (
+                    <div style={{ flexShrink: 0, textAlign: "right" }}>
+                      <span style={{ fontWeight: 800, fontSize: 15, color: isTop ? "var(--green)" : "#ef4444" }}>{d.correct}</span>
+                      <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400 }}>/{d.total}</span>
+                    </div>
+                  ) : (
+                    <div style={{ flexShrink: 0, textAlign: "right" }}>
+                      <div style={{ fontWeight: 800, fontSize: 16, color: isTop ? "var(--green)" : "#ef4444" }}>{d.pct}%</div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{d.correct}/{d.total}</div>
+                    </div>
+                  )}
+                </div>
+              );
+              return (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, letterSpacing: "0.05em" }}>
+                    상위 3팀 {isRegular ? "· 맞춘수/투표수 순" : "· 적중률 순"}
+                  </div>
+                  {top3.map((d, i) => renderRow(d, i, true))}
+                  {statsData.length > 3 && (
+                    <>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", margin: "14px 0 6px", letterSpacing: "0.05em" }}>하위 3팀</div>
+                      {bottom3.map((d, i) => renderRow(d, statsData.length - bottom3.length + i, false))}
+                    </>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
       )}
 
       {toast && <div className="toast">{toast}</div>}
