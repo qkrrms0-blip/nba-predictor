@@ -507,15 +507,21 @@ export default function AdminPage() {
   const [statsSeasonType, setStatsSeasonType] = useState<"regular" | "post">("post");
   const [statsData, setStatsData] = useState<{ team: string; total: number; correct: number; pct: number }[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [statsSeasonId, setStatsSeasonId] = useState<number | null>(null); // 시즌별 필터용
 
-  const loadUserStats = useCallback(async (userId: string, seasonType: "regular" | "post") => {
+  // 시즌 랭킹 모달
+  const [seasonRankingModal, setSeasonRankingModal] = useState<{ id: number; name: string } | null>(null);
+  const [seasonRankingData, setSeasonRankingData] = useState<{ id: string; name: string; total_points: number; correct_votes: number; total_votes: number; accuracy_pct: number }[]>([]);
+  const [seasonRankingLoading, setSeasonRankingLoading] = useState(false);
+
+  const loadUserStats = useCallback(async (userId: string, seasonType: "regular" | "post", seasonId?: number) => {
     setStatsLoading(true);
     setStatsData([]);
     const { data, error } = await supabase
       .from("votes")
-      .select("voted_team, is_correct, games(home_team, away_team, season_type, winner)")
+      .select("voted_team, is_correct, games(home_team, away_team, season_type, winner, season_id)")
       .eq("user_id", userId)
-      .not("is_correct", "is", null); // 정산 완료된 것만
+      .not("is_correct", "is", null);
 
     if (error) {
       showToast("❌ 데이터 로드 실패: " + error.message);
@@ -524,8 +530,12 @@ export default function AdminPage() {
     }
     if (!data || data.length === 0) { setStatsLoading(false); return; }
 
-    // season_type 필터
-    const filtered = data.filter((v: any) => v.games?.season_type === seasonType);
+    // season_type 필터 + seasonId 필터
+    const filtered = data.filter((v: any) => {
+      if (v.games?.season_type !== seasonType) return false;
+      if (seasonId && v.games?.season_id !== seasonId) return false;
+      return true;
+    });
 
     // 팀별 집계
     const teamMap: Record<string, { total: number; correct: number }> = {};
@@ -555,8 +565,37 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (statsModal) loadUserStats(statsModal.id, statsSeasonType);
-  }, [statsModal, statsSeasonType, loadUserStats]);
+    if (statsModal) loadUserStats(statsModal.id, statsSeasonType, statsSeasonId ?? undefined);
+  }, [statsModal, statsSeasonType, statsSeasonId, loadUserStats]);
+
+  const loadSeasonRanking = useCallback(async (seasonId: number) => {
+    setSeasonRankingLoading(true);
+    setSeasonRankingData([]);
+
+    const { data: allUsers } = await supabase.from("users").select("id, name, bonus_points").eq("approved", true);
+    const { data: votes } = await supabase.from("votes").select("user_id, is_correct, points").eq("season_id", seasonId).not("is_correct", "is", null);
+
+    if (!allUsers) { setSeasonRankingLoading(false); return; }
+
+    const rankMap: Record<string, { id: string; name: string; total_points: number; correct_votes: number; total_votes: number }> = {};
+    allUsers.forEach((u: any) => {
+      rankMap[u.id] = { id: u.id, name: u.name, total_points: u.bonus_points || 0, correct_votes: 0, total_votes: 0 };
+    });
+    votes?.forEach((v: any) => {
+      if (!rankMap[v.user_id]) return;
+      rankMap[v.user_id].total_votes++;
+      if (v.is_correct) { rankMap[v.user_id].correct_votes++; rankMap[v.user_id].total_points += v.points || 0; }
+    });
+
+    const result = Object.values(rankMap).map((e) => ({
+      ...e,
+      total_points: Math.round(e.total_points * 10) / 10,
+      accuracy_pct: e.total_votes > 0 ? Math.round(e.correct_votes / e.total_votes * 1000) / 10 : 0,
+    })).sort((a, b) => b.total_points - a.total_points || b.accuracy_pct - a.accuracy_pct);
+
+    setSeasonRankingData(result);
+    setSeasonRankingLoading(false);
+  }, []);
 
   const endSeason = async (seasonId: number) => {
     // 미정산(winner=null) 경기가 있으면 종료 불가
@@ -1405,8 +1444,14 @@ export default function AdminPage() {
 
                     {/* 헤더 */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{statsModal.name}의 팀별 적중률</div>
-                      <button onClick={() => setStatsModal(null)}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {statsSeasonId !== null && (
+                          <button onClick={() => { setStatsModal(null); }}
+                            style={{ background: "transparent", border: "none", fontSize: 18, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>←</button>
+                        )}
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>{statsModal.name}의 팀별 적중률</div>
+                      </div>
+                      <button onClick={() => { setStatsModal(null); setStatsSeasonId(null); }}
                         style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
                     </div>
 
@@ -1517,17 +1562,64 @@ export default function AdminPage() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       {s.is_active && <span className="badge badge-correct">활성</span>}
-                      {s.is_active && (
+                      {s.is_active ? (
                         <button
                           onClick={() => { setEndSeasonModal(s.id); setEndSeasonModalInput(""); }}
                           style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                           종료
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { setSeasonRankingModal({ id: s.id, name: s.name }); loadSeasonRanking(s.id); }}
+                          style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                          랭킹
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
               ))}
+
+              {/* 시즌 랭킹 모달 */}
+              {seasonRankingModal && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+                  onClick={() => setSeasonRankingModal(null)}>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 16px", width: "100%", maxWidth: 360, maxHeight: "80vh", overflowY: "auto" }}
+                    onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{seasonRankingModal.name} 랭킹</div>
+                      <button onClick={() => setSeasonRankingModal(null)}
+                        style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+                    </div>
+                    {seasonRankingLoading ? (
+                      <div className="loading-spinner"><div className="spinner" /></div>
+                    ) : seasonRankingData.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: 13 }}>데이터가 없습니다</div>
+                    ) : (
+                      seasonRankingData.map((entry, idx) => {
+                        const rank = idx === 0 ? 1 : seasonRankingData[idx - 1].total_points === entry.total_points ? idx : idx + 1;
+                        const rankIcon = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
+                        return (
+                          <div key={entry.id}
+                            onClick={() => {
+                              setStatsSeasonId(seasonRankingModal.id);
+                              setStatsModal({ id: entry.id, name: entry.name });
+                              setStatsSeasonType("post");
+                            }}
+                            style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                            <span style={{ minWidth: 24, fontSize: 14, textAlign: "center" }}>{rankIcon}</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600 }}>{entry.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{entry.correct_votes}/{entry.total_votes} · {entry.accuracy_pct}%</div>
+                            </div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--accent)" }}>{entry.total_points}</div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* 시즌 종료 모달 */}
               {endSeasonModal !== null && (
@@ -1539,7 +1631,6 @@ export default function AdminPage() {
                     background: "var(--surface)", border: "1px solid var(--border)",
                     borderRadius: 14, padding: "24px 20px", width: "100%", maxWidth: 320,
                   }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>시즌 종료</div>
                     <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 14 }}>
                       확인을 위해 <strong style={{ color: "#ef4444" }}>아래 문구</strong>를 입력하세요.
                     </p>
