@@ -1361,10 +1361,10 @@ export default function AdminPage() {
 
               <p className="section-subtitle">총 {users.length}명</p>
               {users.map((user) => (
-                <div key={user.id} className="admin-user-row">
+                <div key={user.id} className="admin-user-row" style={{ cursor: "default" }}>
                   <div style={{ flex: 1 }}>
-                    <div
-                      style={{ fontWeight: 600, fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
+                    <button
+                      style={{ fontWeight: 600, fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "var(--text)", padding: 0 }}
                       onClick={() => {
                         setStatsSeasonId(null);
                         setStatsSeasonType("post");
@@ -1374,7 +1374,7 @@ export default function AdminPage() {
                     >
                       {user.name}
                       <span style={{ fontSize: 10, color: "var(--accent)", opacity: 0.7 }}>▸</span>
-                    </div>
+                    </button>
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{user.email}</div>
                     <div style={{ fontSize: 11, marginTop: 2 }}>
                       {user.approved
@@ -1577,13 +1577,7 @@ export default function AdminPage() {
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 16px", width: "100%", maxWidth: 360, maxHeight: "80vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {statsSeasonId !== null && (
-                  <button onClick={() => { setStatsModal(null); }}
-                    style={{ background: "transparent", border: "none", fontSize: 18, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>←</button>
-                )}
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{statsModal.name}의 팀별 적중률</div>
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{statsModal.name}의 팀별 적중률</div>
               <button onClick={() => { setStatsModal(null); setStatsSeasonId(null); }}
                 style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
             </div>
