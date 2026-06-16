@@ -1500,16 +1500,19 @@ export default function AdminPage() {
                         const rankIcon = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
                         return (
                           <div key={entry.id}
-                            onClick={() => {
-                              setStatsSeasonId(seasonRankingModal.id);
-                              setStatsSeasonType("post");
-                              setStatsModal({ id: entry.id, name: entry.name });
-                              loadUserStats(entry.id, "post", seasonRankingModal.id);
-                            }}
-                            style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                            style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: "1px solid var(--border)", cursor: "default" }}>
                             <span style={{ minWidth: 24, fontSize: 14, textAlign: "center" }}>{rankIcon}</span>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 13, fontWeight: 600 }}>{entry.name}</div>
+                              <button
+                                onClick={() => {
+                                  setStatsSeasonId(seasonRankingModal.id);
+                                  setStatsSeasonType("post");
+                                  setStatsModal({ id: entry.id, name: entry.name });
+                                  loadUserStats(entry.id, "post", seasonRankingModal.id);
+                                }}
+                                style={{ fontSize: 13, fontWeight: 600, background: "none", border: "none", color: "var(--text)", padding: 0, cursor: "pointer" }}>
+                                {entry.name}
+                              </button>
                               <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{entry.correct_votes}/{entry.total_votes} · {entry.accuracy_pct}%</div>
                             </div>
                             <div style={{ fontSize: 18, fontWeight: 700, color: "var(--accent)" }}>{entry.total_points}</div>
