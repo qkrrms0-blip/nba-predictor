@@ -7,6 +7,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { detectSeasonType, fetchSeasonRanking } from "@/lib/ranking";
 import { format, addDays } from "date-fns";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -513,6 +514,7 @@ export default function AdminPage() {
   const [seasonRankingModal, setSeasonRankingModal] = useState<{ id: number; name: string } | null>(null);
   const [seasonRankingData, setSeasonRankingData] = useState<{ id: string; name: string; total_points: number; correct_votes: number; total_votes: number; accuracy_pct: number }[]>([]);
   const [seasonRankingLoading, setSeasonRankingLoading] = useState(false);
+  const [seasonRankingType, setSeasonRankingType] = useState<"regular" | "post">("post");
 
   const loadUserStats = useCallback(async (userId: string, seasonType: "regular" | "post", seasonId?: number) => {
     setStatsLoading(true);
@@ -568,38 +570,16 @@ export default function AdminPage() {
     if (statsModal) loadUserStats(statsModal.id, statsSeasonType, statsSeasonId ?? undefined);
   }, [statsSeasonType]);
 
-  const loadSeasonRanking = useCallback(async (seasonId: number) => {
+  const loadSeasonRanking = useCallback(async (seasonId: number, type: "regular" | "post") => {
     setSeasonRankingLoading(true);
     setSeasonRankingData([]);
-
-    const { data: allUsers } = await supabase.from("users").select("id, name").eq("approved", true);
-    const { data: votes } = await supabase.from("votes").select("user_id, is_correct, points").eq("season_id", seasonId).not("is_correct", "is", null);
-
-    // 보정 점수는 시즌별로 따로 저장 (season_bonus)
-    const { data: bonusRows } = await supabase.from("season_bonus").select("user_id, points").eq("season_id", seasonId);
-    const bonusMap = new Map<string, number>(
-      (bonusRows ?? []).map((b: { user_id: string; points: number | null }) => [b.user_id, b.points || 0])
+    const result = await fetchSeasonRanking(supabase, seasonId, type);
+    setSeasonRankingData(
+      result.map((e) => ({
+        id: e.id, name: e.name, total_points: e.total_points,
+        correct_votes: e.correct_votes, total_votes: e.total_votes, accuracy_pct: e.accuracy_pct,
+      }))
     );
-
-    if (!allUsers) { setSeasonRankingLoading(false); return; }
-
-    const rankMap: Record<string, { id: string; name: string; total_points: number; correct_votes: number; total_votes: number }> = {};
-    allUsers.forEach((u: any) => {
-      rankMap[u.id] = { id: u.id, name: u.name, total_points: bonusMap.get(u.id) || 0, correct_votes: 0, total_votes: 0 };
-    });
-    votes?.forEach((v: any) => {
-      if (!rankMap[v.user_id]) return;
-      rankMap[v.user_id].total_votes++;
-      if (v.is_correct) { rankMap[v.user_id].correct_votes++; rankMap[v.user_id].total_points += v.points || 0; }
-    });
-
-    const result = Object.values(rankMap).map((e) => ({
-      ...e,
-      total_points: Math.round(e.total_points * 10) / 10,
-      accuracy_pct: e.total_votes > 0 ? Math.round(e.correct_votes / e.total_votes * 1000) / 10 : 0,
-    })).sort((a, b) => b.total_points - a.total_points || b.accuracy_pct - a.accuracy_pct);
-
-    setSeasonRankingData(result);
     setSeasonRankingLoading(false);
   }, []);
 
@@ -1475,7 +1455,12 @@ export default function AdminPage() {
                         </button>
                       ) : (
                         <button
-                          onClick={() => { setSeasonRankingModal({ id: s.id, name: s.name }); loadSeasonRanking(s.id); }}
+                          onClick={async () => {
+                            setSeasonRankingModal({ id: s.id, name: s.name });
+                            const t = await detectSeasonType(supabase, s.id);
+                            setSeasonRankingType(t);
+                            loadSeasonRanking(s.id, t);
+                          }}
                           style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 12px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
                           랭킹
                         </button>
@@ -1496,6 +1481,20 @@ export default function AdminPage() {
                       <button onClick={() => setSeasonRankingModal(null)}
                         style={{ background: "transparent", border: "none", fontSize: 20, color: "var(--text-muted)", cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
                     </div>
+                    <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                      {(["regular", "post"] as const).map((t) => (
+                        <button key={t}
+                          onClick={() => { setSeasonRankingType(t); loadSeasonRanking(seasonRankingModal.id, t); }}
+                          style={{
+                            flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                            border: "1px solid var(--border)",
+                            background: seasonRankingType === t ? "var(--accent)" : "var(--surface2)",
+                            color: seasonRankingType === t ? "#fff" : "var(--text-muted)",
+                          }}>
+                          {t === "regular" ? "정규" : "POST"}
+                        </button>
+                      ))}
+                    </div>
                     {seasonRankingLoading ? (
                       <div className="loading-spinner"><div className="spinner" /></div>
                     ) : seasonRankingData.length === 0 ? (
@@ -1512,9 +1511,9 @@ export default function AdminPage() {
                               <button
                                 onClick={() => {
                                   setStatsSeasonId(seasonRankingModal.id);
-                                  setStatsSeasonType("post");
+                                  setStatsSeasonType(seasonRankingType);
                                   setStatsModal({ id: entry.id, name: entry.name });
-                                  loadUserStats(entry.id, "post", seasonRankingModal.id);
+                                  loadUserStats(entry.id, seasonRankingType, seasonRankingModal.id);
                                 }}
                                 style={{ fontSize: 13, fontWeight: 600, background: "none", border: "none", color: "var(--text)", padding: 0, cursor: "pointer" }}>
                                 {entry.name}

@@ -7,6 +7,7 @@ import { format, addDays } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Game, Vote, ROUND_POINTS, RankingEntry } from "@/lib/types";
 import { getTeamLogoUrl } from "@/lib/nba-api";
+import { detectSeasonType, fetchSeasonRanking } from "@/lib/ranking";
 
 const DATE_TABS = [
   { label: "오늘", offset: 0 },
@@ -139,42 +140,10 @@ export default function VotingPage() {
     }
     setSeasonEnded(false);
 
-    const { data: allUsers } = await supabase
-      .from("users").select("id, name, email").eq("approved", true);
-
-    const { data: votes } = await supabase
-      .from("votes").select("user_id, is_correct, points").eq("season_id", seasonData.id);
-
-    // 보정 점수는 시즌별로 따로 저장 (season_bonus)
-    const { data: bonusRows } = await supabase
-      .from("season_bonus").select("user_id, points").eq("season_id", seasonData.id);
-    const bonusMap = new Map<string, number>(
-      (bonusRows ?? []).map((b: { user_id: string; points: number | null }) => [b.user_id, b.points || 0])
-    );
-
-    if (!allUsers) return;
-
-    const rankMap: Record<string, RankingEntry> = {};
-    allUsers.forEach((u: { id: string; name: string; email: string }) => {
-      rankMap[u.id] = {
-        id: u.id, name: u.name, email: u.email,
-        season_id: seasonData.id, season_name: "",
-        total_votes: 0, correct_votes: 0, total_points: bonusMap.get(u.id) || 0, accuracy_pct: 0,
-      };
-    });
-
-    votes?.forEach((v: { user_id: string; is_correct: boolean | null; points: number | null }) => {
-      if (!rankMap[v.user_id]) return;
-      rankMap[v.user_id].total_votes++;
-      if (v.is_correct) {
-        rankMap[v.user_id].correct_votes++;
-        rankMap[v.user_id].total_points += v.points || 0;
-      }
-    });
-
-    const sorted = Object.values(rankMap)
-      .map((e) => ({ ...e, total_points: Math.round(e.total_points * 10) / 10 }))
-      .sort((a, b) => b.total_points - a.total_points);
+    // 지금 단계(정규/포스트)의 랭킹만 보여준다
+    const seasonType = await detectSeasonType(supabase, seasonData.id);
+    const sorted = await fetchSeasonRanking(supabase, seasonData.id, seasonType);
+    if (sorted.length === 0) return;
 
     const groups: TopRanker[] = [];
     let i = 0, currentRank = 1;

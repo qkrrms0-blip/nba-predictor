@@ -4,11 +4,13 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Season, RankingEntry } from "@/lib/types";
+import { SeasonType, detectSeasonType, fetchSeasonRanking } from "@/lib/ranking";
 
 export default function RankingPage() {
   const supabase = createClient();
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
+  const [seasonType, setSeasonType] = useState<SeasonType | null>(null);
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [myId, setMyId] = useState("");
@@ -33,72 +35,21 @@ export default function RankingPage() {
     init();
   }, []);
 
+  // 시즌을 바꾸면 그 시즌의 지금 단계(정규/포스트)를 기본으로 보여준다
   useEffect(() => {
     if (selectedSeason === null) return;
-    loadRanking(selectedSeason);
+    setSeasonType(null);
+    detectSeasonType(supabase, selectedSeason).then(setSeasonType);
   }, [selectedSeason]);
 
-  const loadRanking = async (seasonId: number) => {
+  useEffect(() => {
+    if (selectedSeason === null || seasonType === null) return;
+    loadRanking(selectedSeason, seasonType);
+  }, [selectedSeason, seasonType]);
+
+  const loadRanking = async (seasonId: number, type: SeasonType) => {
     setLoading(true);
-
-    const { data: allUsers } = await supabase
-      .from("users")
-      .select("id, name, email")
-      .eq("approved", true);
-
-    const { data: votes } = await supabase
-      .from("votes")
-      .select("user_id, is_correct, points")
-      .eq("season_id", seasonId)
-      .not("is_correct", "is", null);
-
-    // 보정 점수는 시즌별로 따로 저장 (season_bonus)
-    const { data: bonusRows } = await supabase
-      .from("season_bonus")
-      .select("user_id, points")
-      .eq("season_id", seasonId);
-    const bonusMap = new Map<string, number>(
-      (bonusRows ?? []).map((b: { user_id: string; points: number | null }) => [b.user_id, b.points || 0])
-    );
-
-    if (!allUsers) {
-      setRankings([]);
-      setLoading(false);
-      return;
-    }
-
-    const rankMap: Record<string, RankingEntry> = {};
-    allUsers.forEach((u: { id: string; name: string; email: string }) => {
-      rankMap[u.id] = {
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        season_id: seasonId,
-        season_name: "",
-        total_votes: 0,
-        correct_votes: 0,
-        total_points: bonusMap.get(u.id) || 0,
-        accuracy_pct: 0,
-      };
-    });
-
-    votes?.forEach((v: { user_id: string; is_correct: boolean | null; points: number | null }) => {
-      if (!rankMap[v.user_id]) return;
-      rankMap[v.user_id].total_votes++;
-      if (v.is_correct) {
-        rankMap[v.user_id].correct_votes++;
-        rankMap[v.user_id].total_points += v.points || 0;
-      }
-    });
-
-    const result = Object.values(rankMap).map((entry) => ({
-      ...entry,
-      total_points: Math.round(entry.total_points * 10) / 10,
-      accuracy_pct: entry.total_votes > 0
-        ? Math.round((entry.correct_votes / entry.total_votes) * 1000) / 10
-        : 0,
-    })).sort((a, b) => b.total_points - a.total_points || b.accuracy_pct - a.accuracy_pct);
-
+    const result = await fetchSeasonRanking(supabase, seasonId, type);
     setRankings(result);
     setLoading(false);
   };
@@ -146,6 +97,20 @@ export default function RankingPage() {
             </option>
           ))}
         </select>
+        {(["regular", "post"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setSeasonType(t)}
+            style={{
+              marginLeft: 6, padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
+              border: "1px solid var(--border)",
+              background: seasonType === t ? "var(--accent)" : "var(--surface2)",
+              color: seasonType === t ? "#fff" : "var(--text-muted)",
+            }}
+          >
+            {t === "regular" ? "정규" : "POST"}
+          </button>
+        ))}
       </div>
 
       {loading ? (
