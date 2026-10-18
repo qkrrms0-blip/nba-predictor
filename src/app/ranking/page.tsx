@@ -43,7 +43,7 @@ export default function RankingPage() {
 
     const { data: allUsers } = await supabase
       .from("users")
-      .select("id, name, email, bonus_points")
+      .select("id, name, email")
       .eq("approved", true);
 
     const { data: votes } = await supabase
@@ -52,6 +52,15 @@ export default function RankingPage() {
       .eq("season_id", seasonId)
       .not("is_correct", "is", null);
 
+    // 보정 점수는 시즌별로 따로 저장 (season_bonus)
+    const { data: bonusRows } = await supabase
+      .from("season_bonus")
+      .select("user_id, points")
+      .eq("season_id", seasonId);
+    const bonusMap = new Map<string, number>(
+      (bonusRows ?? []).map((b: { user_id: string; points: number | null }) => [b.user_id, b.points || 0])
+    );
+
     if (!allUsers) {
       setRankings([]);
       setLoading(false);
@@ -59,7 +68,7 @@ export default function RankingPage() {
     }
 
     const rankMap: Record<string, RankingEntry> = {};
-    allUsers.forEach((u: { id: string; name: string; email: string; bonus_points: number | null }) => {
+    allUsers.forEach((u: { id: string; name: string; email: string }) => {
       rankMap[u.id] = {
         id: u.id,
         name: u.name,
@@ -68,7 +77,7 @@ export default function RankingPage() {
         season_name: "",
         total_votes: 0,
         correct_votes: 0,
-        total_points: u.bonus_points || 0,
+        total_points: bonusMap.get(u.id) || 0,
         accuracy_pct: 0,
       };
     });

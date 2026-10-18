@@ -140,19 +140,26 @@ export default function VotingPage() {
     setSeasonEnded(false);
 
     const { data: allUsers } = await supabase
-      .from("users").select("id, name, email, bonus_points").eq("approved", true);
+      .from("users").select("id, name, email").eq("approved", true);
 
     const { data: votes } = await supabase
       .from("votes").select("user_id, is_correct, points").eq("season_id", seasonData.id);
 
+    // 보정 점수는 시즌별로 따로 저장 (season_bonus)
+    const { data: bonusRows } = await supabase
+      .from("season_bonus").select("user_id, points").eq("season_id", seasonData.id);
+    const bonusMap = new Map<string, number>(
+      (bonusRows ?? []).map((b: { user_id: string; points: number | null }) => [b.user_id, b.points || 0])
+    );
+
     if (!allUsers) return;
 
     const rankMap: Record<string, RankingEntry> = {};
-    allUsers.forEach((u: { id: string; name: string; email: string; bonus_points: number | null }) => {
+    allUsers.forEach((u: { id: string; name: string; email: string }) => {
       rankMap[u.id] = {
         id: u.id, name: u.name, email: u.email,
         season_id: seasonData.id, season_name: "",
-        total_votes: 0, correct_votes: 0, total_points: u.bonus_points || 0, accuracy_pct: 0,
+        total_votes: 0, correct_votes: 0, total_points: bonusMap.get(u.id) || 0, accuracy_pct: 0,
       };
     });
 
