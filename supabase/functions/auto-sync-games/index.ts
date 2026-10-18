@@ -39,7 +39,8 @@ async function fetchGamesByDateRange(startDate: string, endDate: string) {
             for (const event of json.events) {
               if (!seenIds.has(event.id)) {
                 seenIds.add(event.id);
-                allGames.push(event);
+                // 어느 seasontype 쿼리에서 나온 경기인지 기록 (응답의 season.type은 믿지 않음)
+                allGames.push({ ...event, _seasonType: seasonType });
               }
             }
           }
@@ -70,14 +71,16 @@ function mapESPNGameToDBGame(game: any, seasonId: number) {
     else if (awayScore > homeScore) winner = "away";
   }
 
-  const headline = comp.notes?.[0]?.headline || "";
-  const round = mapESPNHeadlineToRound(headline);
-
   const startTime = new Date(comp.date);
   const voteDeadline = new Date(startTime.getTime() - 60 * 60 * 1000);
 
-  const seasonType = game.season?.type;
-  const season_type = seasonType === 2 ? "regular" : "post";
+  // 조회에 쓴 seasontype(2=정규, 3=포스트)을 기준으로 판단
+  const isPost = game._seasonType === 3;
+  const season_type = isPost ? "post" : "regular";
+
+  // 정규시즌은 라운드가 없으므로 "regular", 포스트시즌만 headline으로 라운드 판별
+  const headline = comp.notes?.[0]?.headline || "";
+  const round = isPost ? mapESPNHeadlineToRound(headline) : "regular";
 
   const statusName = comp.status.type.name;
   const status = statusName === "STATUS_POSTPONED" ? "postponed"

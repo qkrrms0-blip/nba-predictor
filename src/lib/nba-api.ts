@@ -31,6 +31,7 @@ export interface ESPNGame {
     };
   }[];
   season: { type: number; year: number };
+  _seasonType?: 2 | 3; // 조회에 쓴 seasontype (fetchGamesByDateRange에서 기록)
 }
 
 // ESPN notes.headline → Round 타입 매핑
@@ -74,7 +75,8 @@ export async function fetchGamesByDateRange(
             for (const event of json.events) {
               if (!seenIds.has(event.id)) {
                 seenIds.add(event.id);
-                allGames.push(event);
+                // 어느 seasontype 쿼리에서 나온 경기인지 기록 (응답의 season.type은 믿지 않음)
+                allGames.push({ ...event, _seasonType: seasonType });
               }
             }
           }
@@ -106,17 +108,17 @@ export function mapESPNGameToDBGame(game: ESPNGame, seasonId: number) {
     else if (awayScore > homeScore) winner = "away";
   }
 
-  // 라운드 판별: notes[0].headline 사용
-  const headline = comp.notes?.[0]?.headline || "";
-  const round = mapESPNHeadlineToRound(headline);
-
   // 투표 마감: 경기 시작 1시간 전
   const startTime = new Date(comp.date);
   const voteDeadline = new Date(startTime.getTime() - 60 * 60 * 1000);
 
-  // season_type: ESPN game.season.type에서 직접 읽음 (2=정규, 3=포스트)
-  const seasonType = game.season?.type;
-  const season_type = seasonType === 2 ? "regular" : "post";
+  // season_type: 조회에 쓴 seasontype(2=정규, 3=포스트)을 기준으로 판단
+  const isPost = game._seasonType === 3;
+  const season_type = isPost ? "post" : "regular";
+
+  // 라운드: 정규시즌은 "regular", 포스트시즌만 notes[0].headline으로 판별
+  const headline = comp.notes?.[0]?.headline || "";
+  const round = isPost ? mapESPNHeadlineToRound(headline) : "regular";
 
   // status
   const statusName = comp.status.type.name;
