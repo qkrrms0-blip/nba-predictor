@@ -13,6 +13,15 @@ const supabase = createClient(
 );
 const ODDS_API_KEY = Deno.env.get("ODDS_API_KEY")!;
 
+// 배당 → 승리 확률 (소수점 배당 1.85, 미국식 -150 / +130 둘 다 처리)
+function oddsToProb(x: number): number {
+  if (Number.isNaN(x)) return NaN;
+  if (x >= 100) return 100 / (x + 100);   // 미국식 + (예: +130)
+  if (x <= -100) return -x / (-x + 100);  // 미국식 - (예: -150)
+  if (x > 1) return 1 / x;                // 소수점 배당 (예: 1.85)
+  return NaN;
+}
+
 // odds-api.io에서 특정 경기의 유리한 팀 조회 (home/away)
 // home_team, away_team 은 games 테이블의 팀명
 async function getFavoriteTeam(
@@ -41,22 +50,45 @@ async function getFavoriteTeam(
     );
     const oddsData = await oddsRes.json();
 
-    // 첫 번째 북메이커의 ML(moneyline) 배당 비교
+    // 북메이커마다 ML(moneyline) 배당을 승리 확률로 바꾸고, 응답에 있는 북메이커 전체를 평균
     const bookmakers = oddsData?.bookmakers;
     if (!bookmakers) return Math.random() < 0.5 ? "home" : "away";
 
-    const firstBook = Object.values(bookmakers)[0] as Array<{
-      name: string;
-      odds: Array<{ home?: string; away?: string }>;
-    }>;
-    const ml = firstBook?.find((m) => m.name === "ML");
-    if (!ml?.odds?.[0]) return Math.random() < 0.5 ? "home" : "away";
+    let sumHome = 0;
+    let sumAway = 0;
+    let count = 0;
+    const used: string[] = [];
 
-    const homeOdds = parseFloat(ml.odds[0].home ?? "99");
-    const awayOdds = parseFloat(ml.odds[0].away ?? "99");
+    for (const [bookName, markets] of Object.entries(bookmakers)) {
+      const ml = (markets as Array<{
+        name: string;
+        odds: Array<{ home?: string; away?: string }>;
+      }>)?.find((m) => m.name === "ML");
 
-    // 배당 낮은 쪽 = 승률 높은 팀
-    return homeOdds <= awayOdds ? "home" : "away";
+      const homeRaw = parseFloat(ml?.odds?.[0]?.home ?? "");
+      const awayRaw = parseFloat(ml?.odds?.[0]?.away ?? "");
+      const ph = oddsToProb(homeRaw);
+      const pa = oddsToProb(awayRaw);
+      if (Number.isNaN(ph) || Number.isNaN(pa)) continue;
+
+      // 북메이커 마진을 빼려고 두 확률의 합으로 나눠서 100%에 맞춤
+      sumHome += ph / (ph + pa);
+      sumAway += pa / (ph + pa);
+      count++;
+      used.push(`${bookName} ${homeRaw}/${awayRaw}`);
+    }
+
+    // 쓸 수 있는 배당이 하나도 없으면 랜덤
+    if (count === 0) return Math.random() < 0.5 ? "home" : "away";
+
+    const avgHome = sumHome / count;
+    const avgAway = sumAway / count;
+    console.log(
+      `odds ${home_team} vs ${away_team} | ${used.join(", ")} | avg home ${(avgHome * 100).toFixed(1)}% away ${(avgAway * 100).toFixed(1)}%`
+    );
+
+    // 평균 승리 확률이 높은 쪽
+    return avgHome >= avgAway ? "home" : "away";
   } catch {
     // API 실패 시 랜덤으로 폴백
     return Math.random() < 0.5 ? "home" : "away";
