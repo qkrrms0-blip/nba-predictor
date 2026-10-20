@@ -37,6 +37,11 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // 크론이 호출하는 경로는 로그인 없이 통과 (각 경로 안에서 CRON_SECRET 으로 직접 확인)
+  if (pathname.startsWith("/api/cron/")) {
+    return supabaseResponse;
+  }
+
   // 비로그인 시 /login으로 리다이렉트
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
